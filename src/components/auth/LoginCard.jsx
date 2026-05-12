@@ -9,7 +9,7 @@ export default function LoginCard() {
       </h2>
 
       <div className="flex justify-center mb-8">
-        <UserAvatarIcon />
+        <UserAvatarIcon className = "h-[40px] w-[40px]" />
       </div>
 
       <form>

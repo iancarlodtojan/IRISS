@@ -1,11 +1,11 @@
-import userAvatar from "../../assets/images/icon.png";
+import userAvatar from "../../assets/images/account_icon.png";
 
-export default function UserAvatarIcon() {
+export default function UserAvatarIcon({ className = "" }) {
   return (
     <img
       src={userAvatar}
       alt="User Avatar"
-      className="h-[55px] w-[55px] object-contain"
+      className={`object-contain ${className}`}
     />
   );
 }
