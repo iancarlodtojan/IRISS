@@ -1,13 +1,13 @@
-import DashboardLayout from "../components/layout/DashboardLayout";
+import PageLayout from "../components/layout/PageLayout";
 import { DollarSign, Package } from "lucide-react";
 
-export default function Dashboard() {
+export default function DashboardPage() {
   return (
-    <DashboardLayout>
+    <PageLayout>
       {/* TITLE */}
       <h1 className="mb-8 text-4xl font-black">DASHBOARD</h1>
 
-      {/* CARDS */}
+      {/* CARDS TEMPORARY SA*/}
       <div className="mb-8 grid grid-cols-2 gap-10">
         {/* SALES */}
         <div className="flex h-[105px] items-center justify-between rounded-2xl bg-[#f4f4f4] px-6 shadow-md">
@@ -42,6 +42,6 @@ export default function Dashboard() {
       <div className="h-[220px] rounded-2xl bg-[#f4f4f4] p-8 shadow-md">
         <h2 className="text-2xl font-bold">Top Products</h2>
       </div>
-    </DashboardLayout>
+    </PageLayout>
   );
 }

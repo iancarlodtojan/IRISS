@@ -3,12 +3,12 @@ import TopBar from "./TopBar";
 import Sidebar from "./Sidebar";
 import FloatingAddButton from "./FloatingAddButton";
 
-export default function DashboardLayout({ children }) {
+export default function PageLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(() => {
     try {
       const raw = localStorage.getItem("sidebarOpen");
       return raw ? JSON.parse(raw) : false;
-    } catch  {
+    } catch {
       return false;
     }
   });
@@ -16,7 +16,7 @@ export default function DashboardLayout({ children }) {
   useEffect(() => {
     try {
       localStorage.setItem("sidebarOpen", JSON.stringify(sidebarOpen));
-    } catch  {
+    } catch {
       // ignore
     }
   }, [sidebarOpen]);
@@ -32,7 +32,7 @@ export default function DashboardLayout({ children }) {
 
       <main
         className={`pb-32 pt-[95px] pr-8 transition-all duration-300 ${
-          sidebarOpen ? "pl-[220px]" : "pl-[40px]"
+          sidebarOpen ? "pl-[260px]" : "pl-[100px]"
         }`}
       >
         {children}
