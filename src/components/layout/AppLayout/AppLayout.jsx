@@ -3,7 +3,19 @@ import TopBar from "./TopBar";
 import Sidebar from "./Sidebar";
 import FloatingAddButton from "./FloatingAddButton";
 
-export default function PageLayout({ children }) {
+export default function AppLayout({
+  children,
+  links = [],
+
+  // SET UP SEARCH FUNCTION PER PAGE
+  onSearch = () => {},
+
+  // SET UP FLOATING BUTTON FUNCTION PER PAGE
+  floatingButton = {
+    show: true,
+    onClick: () => console.log("Floating add button clicked"),
+  },
+}) {
   const [sidebarOpen, setSidebarOpen] = useState(() => {
     try {
       const raw = localStorage.getItem("sidebarOpen");
@@ -23,22 +35,25 @@ export default function PageLayout({ children }) {
 
   return (
     <div className="min-h-screen bg-[#f4f4f4]">
-      <TopBar />
+      <TopBar onSearch={onSearch} />
 
       <Sidebar
         sidebarOpen={sidebarOpen}
         setSidebarOpen={setSidebarOpen}
+        links={links}
       />
 
       <main
         className={`pb-32 pt-[95px] pr-8 transition-all duration-300 ${
-          sidebarOpen ? "pl-[260px]" : "pl-[100px]"
+          sidebarOpen ? "pl-[260px]" : "pl-6"
         }`}
       >
         {children}
       </main>
 
-      <FloatingAddButton />
+      {floatingButton.show && (
+        <FloatingAddButton onClick={floatingButton.onClick} />
+      )}
     </div>
   );
 }

@@ -1,8 +1,9 @@
-import PageLayout from "../components/layout/PageLayout";
+import AppLayout from "../../components/layout/AppLayout/AppLayout";
+import { cashierLinks } from "../../constants/sidebarLinks";
 
-export default function InventoryPage() {
+export default function ItemsPage() {
   return (
-    <PageLayout>
+    <AppLayout links={cashierLinks}>
       {/* HEADER */}
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-4xl font-black">INVENTORY</h1>
@@ -28,6 +29,6 @@ export default function InventoryPage() {
         {/* EMPTY SPACE */}
         <div className="h-[420px]" />
       </div>
-    </PageLayout>
+    </AppLayout>
   );
 }
