@@ -1,23 +1,124 @@
+import { useEffect, useState } from "react";
+
 import AppLayout from "../../components/layout/AppLayout/AppLayout";
 import { cashierLinks } from "../../constants/sidebarLinks";
+import { supabase } from "../../lib/supabaseClient";
 
 export default function CustomersPage() {
+  const [customers, setCustomers] = useState([]);
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function loadCustomers() {
+      const { data, error } = await supabase
+        .from("customers")
+        .select(
+          `
+          customer_id,
+          customer_name,
+          contact_number,
+          email,
+          orders (
+            order_id
+          )
+        `,
+        )
+        .order("customer_name", { ascending: true });
+
+      if (error) {
+        console.error(error);
+        return;
+      }
+
+      if (!ignore) {
+        setCustomers(data || []);
+      }
+    }
+
+    loadCustomers();
+
+    const channel = supabase
+      .channel("customers-realtime")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "customers",
+        },
+        () => {
+          loadCustomers();
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "orders",
+        },
+        () => {
+          loadCustomers();
+        },
+      )
+      .subscribe();
+
+    return () => {
+      ignore = true;
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
   return (
     <AppLayout links={cashierLinks}>
-      <h1 className="mb-5 text-4xl font-black">CUSTOMERS</h1>
+      <div className="mb-6">
+        <h1 className="text-4xl font-black">CUSTOMERS</h1>
+      </div>
 
-      <div className="min-h-[650px] rounded-2xl bg-[#f4f4f4] px-4 py-4 shadow-md">
-        <div className="grid grid-cols-4 border-b border-gray-300 px-10 pb-5 text-sm text-black">
+      <div className="min-h-[650px] rounded-2xl bg-[#f4f4f4] p-6 shadow-md">
+        {/* TABLE HEADER */}
+        <div className="grid grid-cols-4 border-b border-gray-300 pb-5 text-sm font-semibold text-black">
           <p>Customer Name</p>
-          <p>Phone Number</p>
-          <p>Email Address</p>
-          <p>No. of Receipts</p>
+
+          <p className="text-center">Phone Number</p>
+
+          <p className="text-center">Email Address</p>
+
+          <p className="text-center">No. of Receipts</p>
         </div>
 
-        <div className="border-b border-gray-300 px-10 py-14" />
-        <div className="border-b border-gray-300 px-10 py-14" />
-        <div className="border-b border-gray-300 px-10 py-14" />
-        <div className="border-b border-gray-300 px-10 py-14" />
+        {/* CUSTOMERS */}
+        {customers.length === 0 ? (
+          <div className="flex h-[550px] items-center justify-center text-gray-400">
+            No customers found.
+          </div>
+        ) : (
+          <div className="divide-y divide-gray-200">
+            {customers.map((customer) => (
+              <div
+                key={customer.customer_id}
+                className="grid grid-cols-4 items-center py-5 text-sm"
+              >
+                {/* CUSTOMER NAME */}
+                <p>{customer.customer_name}</p>
+
+                {/* PHONE */}
+                <p className="text-center">
+                  {customer.contact_number || "N/A"}
+                </p>
+
+                {/* EMAIL */}
+                <p className="text-center">{customer.email || "N/A"}</p>
+
+                {/* RECEIPTS */}
+                <p className="text-center font-medium">
+                  {customer.orders?.length || 0}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </AppLayout>
   );

@@ -1,20 +1,16 @@
+// AppLayout.jsx
+
 import { useState, useEffect } from "react";
 import TopBar from "./TopBar";
 import Sidebar from "./Sidebar";
 import FloatingAddButton from "./FloatingAddButton";
 
+import InvoiceModal from "../../modals/InvoiceModal";
+
 export default function AppLayout({
   children,
   links = [],
-
-  // SET UP SEARCH FUNCTION PER PAGE
   onSearch = () => {},
-
-  // SET UP FLOATING BUTTON FUNCTION PER PAGE
-  floatingButton = {
-    show: true,
-    onClick: () => console.log("Floating add button clicked"),
-  },
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(() => {
     try {
@@ -25,6 +21,8 @@ export default function AppLayout({
     }
   });
 
+  const [invoiceOpen, setInvoiceOpen] = useState(false);
+
   useEffect(() => {
     try {
       localStorage.setItem("sidebarOpen", JSON.stringify(sidebarOpen));
@@ -32,6 +30,21 @@ export default function AppLayout({
       // ignore
     }
   }, [sidebarOpen]);
+
+  const role = localStorage.getItem("userRole");
+
+  const roleFloatingActions = {
+    cashier: [
+      {
+        label: "Create Invoice",
+        onClick: () => {
+          setInvoiceOpen(true);
+        },
+      },
+    ],
+  };
+
+  const floatingActions = roleFloatingActions[role] || [];
 
   return (
     <div className="min-h-screen bg-[#f4f4f4]">
@@ -51,9 +64,14 @@ export default function AppLayout({
         {children}
       </main>
 
-      {floatingButton.show && (
-        <FloatingAddButton onClick={floatingButton.onClick} />
+      {floatingActions.length > 0 && (
+        <FloatingAddButton actions={floatingActions} />
       )}
+
+      <InvoiceModal
+        open={invoiceOpen}
+        onClose={() => setInvoiceOpen(false)}
+      />
     </div>
   );
 }
