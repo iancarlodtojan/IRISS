@@ -13,6 +13,7 @@ import AdminDashboardPage from "./pages/Admin/DashboardPage";
 
 // LOGISTICS
 import LogisticsDashboardPage from "./pages/Logistics/DashboardPage";
+import LogisticsInventoryPage from "./pages/Logistics/InventoryPage";
 
 function App() {
   return (
@@ -44,10 +45,9 @@ function App() {
           element={<LogisticsDashboardPage />}
         />
 
-        {/* TEMP LOGISTICS ROUTES */}
         <Route
           path="/logistics/inventory"
-          element={<LogisticsDashboardPage />}
+          element={<LogisticsInventoryPage />}
         />
         <Route
           path="/logistics/deliveries"

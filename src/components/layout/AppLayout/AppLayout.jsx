@@ -1,11 +1,12 @@
-// AppLayout.jsx
-
 import { useState, useEffect } from "react";
 import TopBar from "./TopBar";
 import Sidebar from "./Sidebar";
 import FloatingAddButton from "./FloatingAddButton";
 
 import InvoiceModal from "../../modals/InvoiceModal";
+import ProductActionModal from "../../modals/ProductActionModal";
+import RestockProductModal from "../../modals/RestockProductModal";
+import AddNewProductModal from "../../modals/AddNewProductModal";
 
 export default function AppLayout({
   children,
@@ -22,6 +23,9 @@ export default function AppLayout({
   });
 
   const [invoiceOpen, setInvoiceOpen] = useState(false);
+  const [productActionOpen, setProductActionOpen] = useState(false);
+  const [restockOpen, setRestockOpen] = useState(false);
+  const [addNewProductOpen, setAddNewProductOpen] = useState(false);
 
   useEffect(() => {
     try {
@@ -39,6 +43,15 @@ export default function AppLayout({
         label: "Create Invoice",
         onClick: () => {
           setInvoiceOpen(true);
+        },
+      },
+    ],
+
+    logistics: [
+      {
+        label: "Add Product",
+        onClick: () => {
+          setProductActionOpen(true);
         },
       },
     ],
@@ -71,6 +84,29 @@ export default function AppLayout({
       <InvoiceModal
         open={invoiceOpen}
         onClose={() => setInvoiceOpen(false)}
+      />
+
+      <ProductActionModal
+        open={productActionOpen}
+        onClose={() => setProductActionOpen(false)}
+        onAddExisting={() => {
+          setProductActionOpen(false);
+          setRestockOpen(true);
+        }}
+        onAddNew={() => {
+          setProductActionOpen(false);
+          setAddNewProductOpen(true);
+        }}
+      />
+
+      <RestockProductModal
+        open={restockOpen}
+        onClose={() => setRestockOpen(false)}
+      />
+
+      <AddNewProductModal
+        open={addNewProductOpen}
+        onClose={() => setAddNewProductOpen(false)}
       />
     </div>
   );

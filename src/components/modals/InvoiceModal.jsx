@@ -266,31 +266,44 @@ export default function InvoiceModal({ open, onClose }) {
 
     if (paymentError) throw paymentError;
 
-    for (const item of invoiceItems) {
-      const { data: product, error: productError } = await supabase
-        .from("products")
-        .select("stock_quantity")
-        .eq("product_id", item.product_id)
-        .single();
+for (const item of invoiceItems) {
+  const { data: product, error: productError } = await supabase
+    .from("products")
+    .select("stock_quantity")
+    .eq("product_id", item.product_id)
+    .single();
 
-      if (productError) throw productError;
+  if (productError) throw productError;
 
-      const newStock = product.stock_quantity - item.quantity;
+  const newStock = product.stock_quantity - item.quantity;
 
-      if (newStock < 0) {
-        throw new Error(`${item.product_name} has insufficient stock`);
-      }
+  if (newStock < 0) {
+    throw new Error(`${item.product_name} has insufficient stock`);
+  }
 
-      const { error: stockError } = await supabase
-        .from("products")
-        .update({
-          stock_quantity: newStock,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("product_id", item.product_id);
+  const { error: stockError } = await supabase
+    .from("products")
+    .update({
+      stock_quantity: newStock,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("product_id", item.product_id);
 
-      if (stockError) throw stockError;
-    }
+  if (stockError) throw stockError;
+
+  const { error: movementError } = await supabase
+    .from("stock_movements")
+    .insert({
+      product_id: item.product_id,
+      user_id: user.id,
+      movement_type: "sale",
+      quantity: item.quantity,
+      previous_stock: product.stock_quantity,
+      new_stock: newStock,
+    });
+
+  if (movementError) throw movementError;
+}
 
     return {
       order,
@@ -770,7 +783,7 @@ export default function InvoiceModal({ open, onClose }) {
               type="button"
               onClick={handleSaveInvoice}
               disabled={saving}
-              className="rounded-xl bg-[#3693a8] px-7 py-2.5 text-white shadow-md transition hover:scale-105 disabled:opacity-60"
+              className="rounded-xl bg-[#4F7DF3] px-7 py-2.5 text-white shadow-md transition hover:scale-105 disabled:opacity-60"
             >
               {saving ? "Saving..." : "Save"}
             </button>

@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 
 import AppLayout from "../../components/layout/AppLayout/AppLayout";
-import { cashierLinks } from "../../constants/sidebarLinks";
+import { logisticsLinks } from "../../constants/sidebarLinks";
 import { supabase } from "../../lib/supabaseClient";
 
-export default function ItemsPage() {
+export default function InventoryPage() {
   const [products, setProducts] = useState([]);
   const [stockMovements, setStockMovements] = useState([]);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -162,7 +162,7 @@ export default function ItemsPage() {
   }
 
   return (
-    <AppLayout links={cashierLinks}>
+    <AppLayout links={logisticsLinks}>
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-4xl font-black">INVENTORY</h1>
 
