@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import AppLayout from "../../components/layout/AppLayout/AppLayout";
 import { cashierLinks } from "../../constants/sidebarLinks";
@@ -8,6 +8,7 @@ export default function ItemsPage() {
   const [products, setProducts] = useState([]);
   const [stockMovements, setStockMovements] = useState([]);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [selectedHistoryGroup, setSelectedHistoryGroup] = useState(null);
 
   useEffect(() => {
     let ignore = false;
@@ -31,8 +32,7 @@ export default function ItemsPage() {
     async function loadStockHistoryRealtime() {
       const { data, error } = await supabase
         .from("stock_movements")
-        .select(
-          `
+        .select(`
           movement_id,
           movement_type,
           quantity,
@@ -46,8 +46,7 @@ export default function ItemsPage() {
             full_name,
             role
           )
-        `,
-        )
+        `)
         .order("created_at", { ascending: false });
 
       if (error) {
@@ -95,11 +94,41 @@ export default function ItemsPage() {
     };
   }, []);
 
+  const groupedStockHistory = useMemo(() => {
+    const groups = {};
+
+    stockMovements.forEach((movement) => {
+      const date = new Date(movement.created_at);
+
+      const minuteKey = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}-${date.getHours()}-${date.getMinutes()}`;
+
+      const userName =
+        movement.users?.full_name || movement.users?.role || "User";
+
+      const key = `${movement.movement_type}-${userName}-${minuteKey}`;
+
+      if (!groups[key]) {
+        groups[key] = {
+          id: key,
+          movement_type: movement.movement_type,
+          userName,
+          created_at: movement.created_at,
+          items: [],
+        };
+      }
+
+      groups[key].items.push(movement);
+    });
+
+    return Object.values(groups).sort(
+      (a, b) => new Date(b.created_at) - new Date(a.created_at),
+    );
+  }, [stockMovements]);
+
   async function loadStockHistory() {
     const { data, error } = await supabase
       .from("stock_movements")
-      .select(
-        `
+      .select(`
         movement_id,
         movement_type,
         quantity,
@@ -113,8 +142,7 @@ export default function ItemsPage() {
           full_name,
           role
         )
-      `,
-      )
+      `)
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -128,37 +156,122 @@ export default function ItemsPage() {
   }
 
   function formatDateTime(dateValue) {
-    return new Date(dateValue).toLocaleString("en-PH", {
-      month: "2-digit",
-      day: "2-digit",
-      year: "2-digit",
-      hour: "2-digit",
+    const date = new Date(dateValue);
+
+    const formattedDate = date.toLocaleDateString("en-PH", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+
+    const formattedTime = date.toLocaleTimeString("en-PH", {
+      hour: "numeric",
       minute: "2-digit",
     });
+
+    return `${formattedDate} • ${formattedTime}`;
   }
 
-  function formatMovementText(movement) {
-    const userRole = movement.users?.role || "User";
-    const userName = movement.users?.full_name || userRole;
-    const productName = movement.products?.product_name || "Unknown Product";
-
-    if (movement.movement_type === "sale") {
-      return `${userName} sold ${movement.quantity} ${productName}.`;
+  function getMovementDisplay(type) {
+    if (type === "restock") {
+      return {
+        icon: "🟢",
+        label: "Restock",
+      };
     }
 
-    if (movement.movement_type === "restock") {
-      return `${userName} restocked ${movement.quantity} ${productName}.`;
+    if (type === "sale") {
+      return {
+        icon: "🔴",
+        label: "Sale",
+      };
     }
 
-    if (movement.movement_type === "adjustment") {
-      return `${userName} adjusted ${productName}.`;
+    if (type === "initial_stock") {
+      return {
+        icon: "🔵",
+        label: "Added Product",
+      };
     }
 
-    if (movement.movement_type === "initial_stock") {
-      return `${userName} added initial stock for ${productName}.`;
+    if (type === "adjustment") {
+      return {
+        icon: "🟡",
+        label: "Adjustment",
+      };
     }
 
-    return `${userName} updated ${productName}.`;
+    return {
+      icon: "⚪",
+      label: "Update",
+    };
+  }
+
+  function numberToWords(number) {
+    const words = [
+      "Zero",
+      "One",
+      "Two",
+      "Three",
+      "Four",
+      "Five",
+      "Six",
+      "Seven",
+      "Eight",
+      "Nine",
+      "Ten",
+    ];
+
+    return words[number] || number;
+  }
+
+  function formatRole(role) {
+    if (role === "logistics") return "Logistic";
+    if (role === "cashier") return "Cashier";
+    if (role === "admin") return "Admin";
+
+    return "User";
+  }
+
+  function formatGroupText(group) {
+    const itemCount = group.items.reduce(
+      (sum, item) => sum + Number(item.quantity || 0),
+      0,
+    );
+
+    const itemWord = numberToWords(itemCount);
+    const itemText = `${itemWord} (${itemCount}) item${
+      itemCount > 1 ? "s" : ""
+    }`;
+
+    const role = group.items[0]?.users?.role || "user";
+    const roleName = formatRole(role);
+
+    if (group.movement_type === "sale") {
+      return `${roleName} sold ${itemText}.`;
+    }
+
+    if (group.movement_type === "restock") {
+      return `${roleName} restocked ${itemText}.`;
+    }
+
+    if (group.movement_type === "initial_stock") {
+      return `${roleName} added ${itemText}.`;
+    }
+
+    if (group.movement_type === "adjustment") {
+      return `${roleName} adjusted ${itemText}.`;
+    }
+
+    return `${roleName} updated ${itemText}.`;
+  }
+
+  function getQuantitySign(type) {
+    if (type === "sale") return "-";
+    if (type === "restock") return "+";
+    if (type === "initial_stock") return "+";
+
+    return "";
   }
 
   return (
@@ -210,12 +323,20 @@ export default function ItemsPage() {
                 <div className="flex justify-center">
                   <span
                     className={`inline-block min-w-[130px] rounded-full px-5 py-2 text-center text-xs font-bold text-white shadow-md ${
-                      product.stock_quantity <= 10
-                        ? "bg-[#F78D41]"
-                        : "bg-[#4AAA5A]"
+                      product.status === "inactive"
+                        ? "bg-gray-400"
+                        : product.stock_quantity <=
+                            Number(product.reorder_level || 10)
+                          ? "bg-[#F78D41]"
+                          : "bg-[#4AAA5A]"
                     }`}
                   >
-                    {product.stock_quantity <= 10 ? "Low Stock" : "In Stock"}
+                    {product.status === "inactive"
+                      ? "Inactive"
+                      : product.stock_quantity <=
+                          Number(product.reorder_level || 10)
+                        ? "Low Stock"
+                        : "In Stock"}
                   </span>
                 </div>
               </div>
@@ -226,13 +347,16 @@ export default function ItemsPage() {
 
       {historyOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/30 backdrop-blur-sm">
-          <div className="h-[650px] w-[760px] overflow-hidden rounded-lg bg-white shadow-2xl">
+          <div className="h-[650px] w-[820px] overflow-hidden rounded-lg bg-white shadow-2xl">
             <div className="flex items-center justify-between px-8 pt-5">
               <h2 className="text-3xl font-black">Stock History</h2>
 
               <button
                 type="button"
-                onClick={() => setHistoryOpen(false)}
+                onClick={() => {
+                  setHistoryOpen(false);
+                  setSelectedHistoryGroup(null);
+                }}
                 className="text-2xl leading-none text-black transition hover:scale-110"
               >
                 ×
@@ -240,56 +364,82 @@ export default function ItemsPage() {
             </div>
 
             <div className="h-[590px] overflow-y-auto px-9 py-5">
-              {stockMovements.length === 0 ? (
+              {selectedHistoryGroup ? (
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedHistoryGroup(null)}
+                    className="mb-5 text-xl transition hover:scale-110"
+                  >
+                    ←
+                  </button>
+
+                  <div className="mb-5">
+                    <h3 className="text-2xl font-black">
+                      {
+                        getMovementDisplay(
+                          selectedHistoryGroup.movement_type,
+                        ).label
+                      }{" "}
+                      Details
+                    </h3>
+
+                    <p className="text-sm text-gray-500">
+                      {formatDateTime(selectedHistoryGroup.created_at)}
+                    </p>
+                  </div>
+
+                  <div className="space-y-3">
+                    {selectedHistoryGroup.items.map((item, index) => (
+                      <div
+                        key={item.movement_id}
+                        className="grid grid-cols-[50px_1fr_100px_130px] items-center border border-black px-5 py-3 text-sm"
+                      >
+                        <p>{index + 1}</p>
+
+                        <p>{item.products?.product_name || "Unknown Product"}</p>
+
+                        <p className="text-center font-semibold">
+                          {getQuantitySign(item.movement_type)}
+                          {item.quantity}
+                        </p>
+
+                        <p className="text-right text-xs text-gray-500">
+                          {item.previous_stock} → {item.new_stock}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : groupedStockHistory.length === 0 ? (
                 <div className="flex h-full items-center justify-center text-gray-400">
                   No stock history found.
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {stockMovements.map((movement) => (
-                    <div
-                      key={movement.movement_id}
-                      className="grid grid-cols-[170px_1fr_170px] items-center border border-black px-5 py-3 text-sm"
-                    >
-                      <div className="flex items-center gap-3 font-bold">
-                        {movement.movement_type === "restock" && (
-                          <>
-                            <span className="text-lg">🟢</span>
-                            <span>Restock</span>
-                          </>
-                        )}
+                  {groupedStockHistory.map((group) => {
+                    const movement = getMovementDisplay(group.movement_type);
 
-                        {movement.movement_type === "sale" && (
-                          <>
-                            <span className="text-lg">🔴</span>
-                            <span>Sale</span>
-                          </>
-                        )}
+                    return (
+                      <button
+                        key={group.id}
+                        type="button"
+                        onClick={() => setSelectedHistoryGroup(group)}
+                        className="grid w-full grid-cols-[170px_1fr_190px] items-center border border-black px-5 py-3 text-left text-sm transition hover:bg-gray-50"
+                      >
+                        <div className="flex items-center gap-3 font-bold">
+                          <span className="text-lg">{movement.icon}</span>
+                          <span>{movement.label}</span>
+                        </div>
 
-                        {movement.movement_type === "initial_stock" && (
-                          <>
-                            <span className="text-lg">🔵</span>
-                            <span>Initial Stock</span>
-                          </>
-                        )}
+                        <p className="font-bold">{formatGroupText(group)}</p>
 
-                        {movement.movement_type === "adjustment" && (
-                          <>
-                            <span className="text-lg">🟡</span>
-                            <span>Adjustment</span>
-                          </>
-                        )}
-                      </div>
-
-                      <p className="font-bold">
-                        {formatMovementText(movement)}
-                      </p>
-
-                      <p className="text-right">
-                        {formatDateTime(movement.created_at)}
-                      </p>
-                    </div>
-                  ))}
+                        <p className="text-right">
+                          {formatDateTime(group.created_at)}
+                        </p>
+                      </button>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -299,3 +449,4 @@ export default function ItemsPage() {
     </AppLayout>
   );
 }
+

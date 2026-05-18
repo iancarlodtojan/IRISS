@@ -47,6 +47,9 @@ export default function LogsPage() {
           created_at,
           customers (
             customer_name
+          ),
+          order_items (
+            quantity
           )
         `)
         .order("created_at", { ascending: false });
@@ -74,7 +77,18 @@ export default function LogsPage() {
         },
         () => {
           loadOrders();
-        }
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "order_items",
+        },
+        () => {
+          loadOrders();
+        },
       )
       .subscribe();
 
@@ -87,6 +101,7 @@ export default function LogsPage() {
   const filteredOrders = useMemo(() => {
     return orders.filter((order) => {
       const date = new Date(order.created_at);
+
       const year = date.getFullYear();
       const month = date.getMonth() + 1;
       const day = date.getDate();
@@ -107,7 +122,20 @@ export default function LogsPage() {
   }, [draftYear, draftMonth]);
 
   function formatDate(dateValue) {
-    return new Date(dateValue).toLocaleDateString("en-PH");
+    const date = new Date(dateValue);
+
+    const formattedDate = date.toLocaleDateString("en-PH", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+
+    const formattedTime = date.toLocaleTimeString("en-PH", {
+      hour: "numeric",
+      minute: "2-digit",
+    });
+
+    return `${formattedDate} • ${formattedTime}`;
   }
 
   function openFilter() {
@@ -115,6 +143,7 @@ export default function LogsPage() {
     setDraftYear(appliedYear);
     setDraftMonth(appliedMonth);
     setDraftDay(appliedDay);
+
     setFilterOpen(true);
   }
 
@@ -123,6 +152,7 @@ export default function LogsPage() {
     setAppliedYear(draftYear);
     setAppliedMonth(draftMonth);
     setAppliedDay(draftDay);
+
     setFilterOpen(false);
   }
 
@@ -142,10 +172,16 @@ export default function LogsPage() {
       </div>
 
       <div className="min-h-[650px] rounded-2xl bg-[#f4f4f4] p-6 shadow-md">
-        <div className="grid grid-cols-[160px_1fr_1fr_160px] border-b border-gray-300 pb-5 text-sm font-semibold text-black">
-          <p>Date</p>
+        {/* HEADER */}
+        <div className="grid grid-cols-[240px_1fr_1fr_140px_160px] border-b border-gray-300 pb-5 text-sm font-semibold text-black">
+          <p>Date & Time</p>
+
           <p className="text-center">Invoice No.</p>
-          <p className="text-center">Customer</p>
+
+          <p className="text-center">Customer Name</p>
+
+          <p className="text-center">No. of Items</p>
+
           <p className="text-right">Total</p>
         </div>
 
@@ -155,35 +191,54 @@ export default function LogsPage() {
           </div>
         ) : (
           <div className="divide-y divide-gray-200">
-            {filteredOrders.map((order) => (
-              <div
-                key={order.order_id}
-                className="grid grid-cols-[160px_1fr_1fr_160px] items-center py-5 text-sm"
-              >
-                <p>{formatDate(order.created_at)}</p>
+            {filteredOrders.map((order) => {
+              const totalItems =
+                order.order_items?.reduce(
+                  (sum, item) => sum + Number(item.quantity || 0),
+                  0,
+                ) || 0;
 
-                <p className="text-center">
-                  {order.invoice_number}
-                </p>
+              return (
+                <div
+                  key={order.order_id}
+                  className="grid grid-cols-[240px_1fr_1fr_140px_160px] items-center py-5 text-sm"
+                >
+                  <p className="whitespace-nowrap">
+                    {formatDate(order.created_at)}
+                  </p>
 
-                <p className="text-center">
-                  {order.customers?.customer_name || "Walk-in Customer"}
-                </p>
+                  <p className="text-center">
+                    {order.invoice_number}
+                  </p>
 
-                <p className="text-right font-semibold">
-                  ₱{Number(order.total_amount).toFixed(2)}
-                </p>
-              </div>
-            ))}
+                  <p className="text-center">
+                    {order.customers?.customer_name ||
+                      "Walk-in Customer"}
+                  </p>
+
+                  <p className="text-center font-semibold">
+                    {totalItems}
+                  </p>
+
+                  <p className="text-right font-semibold">
+                    ₱
+                    {Number(order.total_amount).toFixed(2)}
+                  </p>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
 
+      {/* FILTER MODAL */}
       {filterOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/30 backdrop-blur-sm">
           <div className="h-[560px] w-[620px] overflow-hidden rounded-2xl bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b border-gray-300 px-6 py-4">
-              <h2 className="text-2xl font-black">Filters</h2>
+              <h2 className="text-2xl font-black">
+                Filters
+              </h2>
 
               <button
                 type="button"
@@ -196,19 +251,26 @@ export default function LogsPage() {
 
             <div className="h-[calc(560px-80px)] overflow-y-auto px-6 py-5">
               <div className="mb-5">
-                <p className="mb-3 font-bold">Sort Type</p>
+                <p className="mb-3 font-bold">
+                  Sort Type
+                </p>
 
                 <div className="grid grid-cols-2 gap-4">
                   <button
                     type="button"
-                    onClick={() => setDraftSortType("daily")}
+                    onClick={() =>
+                      setDraftSortType("daily")
+                    }
                     className={`rounded-xl border p-4 text-left transition ${
                       draftSortType === "daily"
                         ? "border-black"
                         : "border-gray-300"
                     }`}
                   >
-                    <p className="font-semibold">Daily</p>
+                    <p className="font-semibold">
+                      Daily
+                    </p>
+
                     <p className="text-xs text-gray-500">
                       Display invoices by day
                     </p>
@@ -226,7 +288,10 @@ export default function LogsPage() {
                         : "border-gray-300"
                     }`}
                   >
-                    <p className="font-semibold">Monthly</p>
+                    <p className="font-semibold">
+                      Monthly
+                    </p>
+
                     <p className="text-xs text-gray-500">
                       Display invoices by month
                     </p>
@@ -240,7 +305,9 @@ export default function LogsPage() {
                 <input
                   type="number"
                   value={draftYear}
-                  onChange={(e) => setDraftYear(e.target.value)}
+                  onChange={(e) =>
+                    setDraftYear(e.target.value)
+                  }
                   className="h-12 w-[140px] rounded-xl border border-gray-300 px-4 outline-none"
                 />
               </div>
@@ -271,27 +338,34 @@ export default function LogsPage() {
 
               {draftSortType === "daily" && (
                 <div className="mb-5">
-                  <p className="mb-3 font-bold">Day</p>
+                  <p className="mb-3 font-bold">
+                    Day
+                  </p>
 
                   <div className="grid grid-cols-7 gap-2">
-                    {Array.from({ length: daysInMonth }, (_, index) => {
-                      const day = index + 1;
+                    {Array.from(
+                      { length: daysInMonth },
+                      (_, index) => {
+                        const day = index + 1;
 
-                      return (
-                        <button
-                          key={day}
-                          type="button"
-                          onClick={() => setDraftDay(String(day))}
-                          className={`h-8 rounded-full border text-xs transition ${
-                            Number(draftDay) === day
-                              ? "border-black bg-gray-100"
-                              : "border-gray-300"
-                          }`}
-                        >
-                          {day}
-                        </button>
-                      );
-                    })}
+                        return (
+                          <button
+                            key={day}
+                            type="button"
+                            onClick={() =>
+                              setDraftDay(String(day))
+                            }
+                            className={`h-8 rounded-full border text-xs transition ${
+                              Number(draftDay) === day
+                                ? "border-black bg-gray-100"
+                                : "border-gray-300"
+                            }`}
+                          >
+                            {day}
+                          </button>
+                        );
+                      },
+                    )}
                   </div>
                 </div>
               )}

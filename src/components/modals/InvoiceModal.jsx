@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
+import PaymentDetailsModal from "./PaymentDetailsModal";
+import PaymentActionModal from "./PaymentActionModal";
 
 export default function InvoiceModal({ open, onClose }) {
   const [products, setProducts] = useState([]);
@@ -16,6 +18,10 @@ export default function InvoiceModal({ open, onClose }) {
   const [quantity, setQuantity] = useState(1);
   const [invoiceItems, setInvoiceItems] = useState([]);
   const [saving, setSaving] = useState(false);
+
+  const [paymentDetailsOpen, setPaymentDetailsOpen] = useState(false);
+  const [paymentActionsOpen, setPaymentActionsOpen] = useState(false);
+  const [savedInvoice, setSavedInvoice] = useState(null);
 
   useEffect(() => {
     if (!open) return;
@@ -64,7 +70,7 @@ export default function InvoiceModal({ open, onClose }) {
       .filter((customer) =>
         customer.customer_name
           .toLowerCase()
-          .includes(customerName.toLowerCase())
+          .includes(customerName.toLowerCase()),
       )
       .slice(0, 5);
   }, [customerName, customers, selectedCustomer]);
@@ -76,7 +82,7 @@ export default function InvoiceModal({ open, onClose }) {
       .filter((product) =>
         product.product_name
           .toLowerCase()
-          .includes(productSearch.toLowerCase())
+          .includes(productSearch.toLowerCase()),
       )
       .slice(0, 6);
   }, [productSearch, products, selectedProduct]);
@@ -120,7 +126,7 @@ export default function InvoiceModal({ open, onClose }) {
     }
 
     const existingItem = invoiceItems.find(
-      (item) => item.product_id === selectedProduct.product_id
+      (item) => item.product_id === selectedProduct.product_id,
     );
 
     if (existingItem) {
@@ -139,8 +145,8 @@ export default function InvoiceModal({ open, onClose }) {
                 quantity: newQuantity,
                 subtotal: newQuantity * item.selling_price,
               }
-            : item
-        )
+            : item,
+        ),
       );
     } else {
       setInvoiceItems((prev) => [
@@ -162,7 +168,7 @@ export default function InvoiceModal({ open, onClose }) {
 
   function handleRemoveItem(productId) {
     setInvoiceItems((prev) =>
-      prev.filter((item) => item.product_id !== productId)
+      prev.filter((item) => item.product_id !== productId),
     );
   }
 
@@ -185,7 +191,7 @@ export default function InvoiceModal({ open, onClose }) {
 
     const existingCustomer = customers.find(
       (customer) =>
-        normalizeName(customer.customer_name) === normalizedTypedName
+        normalizeName(customer.customer_name) === normalizedTypedName,
     );
 
     if (existingCustomer) {
@@ -266,44 +272,44 @@ export default function InvoiceModal({ open, onClose }) {
 
     if (paymentError) throw paymentError;
 
-for (const item of invoiceItems) {
-  const { data: product, error: productError } = await supabase
-    .from("products")
-    .select("stock_quantity")
-    .eq("product_id", item.product_id)
-    .single();
+    for (const item of invoiceItems) {
+      const { data: product, error: productError } = await supabase
+        .from("products")
+        .select("stock_quantity")
+        .eq("product_id", item.product_id)
+        .single();
 
-  if (productError) throw productError;
+      if (productError) throw productError;
 
-  const newStock = product.stock_quantity - item.quantity;
+      const newStock = product.stock_quantity - item.quantity;
 
-  if (newStock < 0) {
-    throw new Error(`${item.product_name} has insufficient stock`);
-  }
+      if (newStock < 0) {
+        throw new Error(`${item.product_name} has insufficient stock`);
+      }
 
-  const { error: stockError } = await supabase
-    .from("products")
-    .update({
-      stock_quantity: newStock,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("product_id", item.product_id);
+      const { error: stockError } = await supabase
+        .from("products")
+        .update({
+          stock_quantity: newStock,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("product_id", item.product_id);
 
-  if (stockError) throw stockError;
+      if (stockError) throw stockError;
 
-  const { error: movementError } = await supabase
-    .from("stock_movements")
-    .insert({
-      product_id: item.product_id,
-      user_id: user.id,
-      movement_type: "sale",
-      quantity: item.quantity,
-      previous_stock: product.stock_quantity,
-      new_stock: newStock,
-    });
+      const { error: movementError } = await supabase
+        .from("stock_movements")
+        .insert({
+          product_id: item.product_id,
+          user_id: user.id,
+          movement_type: "sale",
+          quantity: item.quantity,
+          previous_stock: product.stock_quantity,
+          new_stock: newStock,
+        });
 
-  if (movementError) throw movementError;
-}
+      if (movementError) throw movementError;
+    }
 
     return {
       order,
@@ -328,7 +334,7 @@ for (const item of invoiceItems) {
             <td class="right">${item.selling_price.toFixed(2)}</td>
             <td class="right">${item.subtotal.toFixed(2)}</td>
           </tr>
-        `
+        `,
       )
       .join("");
 
@@ -362,12 +368,6 @@ for (const item of invoiceItems) {
               font-size: 18px;
               font-weight: bold;
               text-align: center;
-            }
-
-            .subtitle {
-              font-size: 12px;
-              text-align: center;
-              margin-bottom: 12px;
             }
 
             .line {
@@ -425,15 +425,14 @@ for (const item of invoiceItems) {
 
         <body>
           <div class="receipt">
-            <div class="title">IRISS STORE</div>
-            <div class="subtitle">Sales & Inventory System</div>
+            <div class="title">E & R Computer Parts and Accessories Trading</div>
 
             <div class="line"></div>
 
             <div class="info">
               Invoice No: ${invoice.invoiceNumber}<br />
               Date: ${new Date(invoice.order.created_at).toLocaleString(
-                "en-PH"
+                "en-PH",
               )}<br />
               Payment: Cash<br />
               Status: Paid
@@ -488,6 +487,174 @@ for (const item of invoiceItems) {
       </html>
     `;
   }
+  function generateInvoiceHTML(invoice) {
+    const itemRows = invoice.items
+      .map(
+        (item) => `
+        <tr>
+          <td>${item.product_name}</td>
+          <td>${item.quantity}</td>
+          <td>₱${item.selling_price.toFixed(2)}</td>
+          <td>₱${item.subtotal.toFixed(2)}</td>
+        </tr>
+      `,
+      )
+      .join("");
+
+    return `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>${invoice.invoiceNumber}</title>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            padding: 40px;
+            color: #000;
+          }
+
+          .header {
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 2px solid #000;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+          }
+
+          .store {
+            font-size: 24px;
+            font-weight: bold;
+          }
+
+          .invoice-title {
+            font-size: 32px;
+            font-weight: bold;
+          }
+
+          .info {
+            margin-bottom: 25px;
+            line-height: 1.6;
+          }
+
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+          }
+
+          th,
+          td {
+            border: 1px solid #000;
+            padding: 12px;
+            text-align: left;
+          }
+
+          th {
+            background: #f2f2f2;
+          }
+
+          .right {
+            text-align: right;
+          }
+
+          .total {
+            margin-top: 25px;
+            text-align: right;
+            font-size: 24px;
+            font-weight: bold;
+          }
+
+          .footer {
+            margin-top: 60px;
+            font-size: 13px;
+            text-align: center;
+          }
+        </style>
+      </head>
+
+      <body>
+        <div class="header">
+          <div>
+            <div class="store">E & R Computer Parts and Accessories Trading</div>
+            <p>Sales & Inventory System</p>
+          </div>
+
+          <div class="invoice-title">INVOICE</div>
+        </div>
+
+        <div class="info">
+          <strong>Invoice No:</strong> ${invoice.invoiceNumber}<br />
+          <strong>Date:</strong> ${new Date(invoice.order.created_at).toLocaleString("en-PH")}<br />
+          <strong>Payment:</strong> Cash<br />
+          <strong>Status:</strong> Paid
+        </div>
+
+        <div class="info">
+          <strong>Bill To:</strong><br />
+          ${invoice.customer.name}<br />
+          ${invoice.customer.contact || "N/A"}<br />
+          ${invoice.customer.email || ""}
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Product</th>
+              <th>Qty</th>
+              <th>Unit Price</th>
+              <th>Subtotal</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            ${itemRows}
+          </tbody>
+        </table>
+
+        <div class="total">
+          TOTAL: ₱${invoice.total.toFixed(2)}
+        </div>
+
+        <div class="footer">
+          This document serves as the official invoice for this transaction.
+        </div>
+
+        <script>
+          window.onload = function () {
+            window.print();
+          };
+        </script>
+      </body>
+    </html>
+  `;
+  }
+
+  function openPrintWindow(invoice, width = 420, height = 650) {
+    const receiptHTML = generateReceiptHTML(invoice);
+
+    const printWindow = window.open(
+      "",
+      "_blank",
+      `width=${width},height=${height}`,
+    );
+
+    if (!printWindow) {
+      alert("Please allow popups");
+      return;
+    }
+
+    printWindow.document.write(receiptHTML);
+    printWindow.document.close();
+  }
+
+  function handleProceedToPayment() {
+    if (invoiceItems.length === 0) {
+      alert("Please add at least one item");
+      return;
+    }
+
+    setPaymentDetailsOpen(true);
+  }
 
   async function handleSaveInvoice() {
     try {
@@ -498,6 +665,7 @@ for (const item of invoiceItems) {
       alert(`Invoice saved successfully: ${invoice.invoiceNumber}`);
 
       resetForm();
+      setPaymentDetailsOpen(false);
       onClose();
     } catch (error) {
       console.error(error);
@@ -512,19 +680,10 @@ for (const item of invoiceItems) {
       setSaving(true);
 
       const invoice = await saveInvoiceToDatabase();
-      const receiptHTML = generateReceiptHTML(invoice);
 
-      const printWindow = window.open("", "_blank", "width=420,height=650");
-
-      if (!printWindow) {
-        throw new Error("Please allow popups to print the receipt");
-      }
-
-      printWindow.document.write(receiptHTML);
-      printWindow.document.close();
-
-      resetForm();
-      onClose();
+      setSavedInvoice(invoice);
+      setPaymentDetailsOpen(false);
+      setPaymentActionsOpen(true);
     } catch (error) {
       console.error(error);
       alert(error.message);
@@ -546,259 +705,305 @@ for (const item of invoiceItems) {
 
   function handleCancel() {
     resetForm();
+    setPaymentDetailsOpen(false);
+    setPaymentActionsOpen(false);
+    setSavedInvoice(null);
     onClose();
   }
 
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/30 backdrop-blur-sm">
-      <div className="max-h-[92vh] w-[880px] overflow-y-auto rounded-3xl bg-[#f4f4f4] p-6 shadow-2xl">
-        <div className="mb-5">
-          <h2 className="text-3xl font-black">Create Invoice</h2>
-        </div>
-
-        <div className="mb-5">
-          <label className="mb-2 block text-base font-semibold">
-            Customer Name
-          </label>
-
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Search or enter customer name..."
-              value={customerName}
-              onChange={(e) => {
-                setCustomerName(e.target.value);
-                setSelectedCustomer(null);
-                setContactNumber("");
-                setEmail("");
-              }}
-              className="h-10 w-full rounded-xl border border-gray-300 bg-white px-4 outline-none"
-            />
-
-            {filteredCustomers.length > 0 && (
-              <div className="absolute left-0 top-[44px] z-[130] max-h-[180px] w-full overflow-y-auto rounded-xl border border-gray-300 bg-white shadow-xl">
-                {filteredCustomers.map((customer) => (
-                  <button
-                    key={customer.customer_id}
-                    type="button"
-                    onClick={() => handleSelectCustomer(customer)}
-                    className="flex w-full flex-col px-4 py-3 text-left hover:bg-gray-100"
-                  >
-                    <span className="font-semibold">
-                      {customer.customer_name}
-                    </span>
-
-                    <span className="text-xs text-gray-500">
-                      {customer.contact_number || "No contact number"}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            )}
+    <>
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/30 backdrop-blur-sm">
+        <div className="max-h-[92vh] w-[880px] overflow-y-auto rounded-3xl bg-[#f4f4f4] p-6 shadow-2xl">
+          <div className="mb-5">
+            <h2 className="text-3xl font-black">Create Invoice</h2>
           </div>
 
-          {selectedCustomer && (
-            <div className="mt-3 rounded-2xl border border-green-200 bg-green-50 p-3">
-              <p className="mb-2 text-sm font-semibold text-green-700">
-                Existing customer selected
-              </p>
+          <div className="mb-5">
+            <label className="mb-2 block text-base font-semibold">
+              Customer Name
+            </label>
 
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <p className="text-gray-500">Contact Number</p>
-                  <p className="font-semibold">
-                    {selectedCustomer.contact_number || "N/A"}
-                  </p>
-                </div>
-
-                <div>
-                  <p className="text-gray-500">Email Address</p>
-                  <p className="font-semibold">
-                    {selectedCustomer.email || "N/A"}
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {!selectedCustomer && customerName.trim() && (
-            <div className="mt-3 rounded-2xl border border-[#3693a8]/20 bg-[#3693a8]/5 p-3">
-              <p className="mb-2 text-sm font-semibold text-[#3693a8]">
-                New customer details
-              </p>
-
-              <div className="grid grid-cols-2 gap-4">
-                <input
-                  type="text"
-                  placeholder="Contact number"
-                  value={contactNumber}
-                  onChange={(e) => setContactNumber(e.target.value)}
-                  className="h-10 rounded-xl border border-gray-300 bg-white px-4 outline-none"
-                />
-
-                <input
-                  type="email"
-                  placeholder="Email optional"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="h-10 rounded-xl border border-gray-300 bg-white px-4 outline-none"
-                />
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="mb-5">
-          <label className="mb-2 block text-base font-semibold">Add Item</label>
-
-          <div className="grid grid-cols-[1fr_90px_110px] gap-3">
             <div className="relative">
               <input
                 type="text"
-                placeholder="Search product..."
-                value={productSearch}
+                placeholder="Search or enter customer name..."
+                value={customerName}
                 onChange={(e) => {
-                  setProductSearch(e.target.value);
-                  setSelectedProduct(null);
+                  setCustomerName(e.target.value);
+                  setSelectedCustomer(null);
+                  setContactNumber("");
+                  setEmail("");
                 }}
                 className="h-10 w-full rounded-xl border border-gray-300 bg-white px-4 outline-none"
               />
 
-              {filteredProducts.length > 0 && (
-                <div className="absolute left-0 top-[44px] z-[120] max-h-[190px] w-full overflow-y-auto rounded-xl border border-gray-300 bg-white shadow-xl">
-                  {filteredProducts.map((product) => (
+              {filteredCustomers.length > 0 && (
+                <div className="absolute left-0 top-[44px] z-[130] max-h-[180px] w-full overflow-y-auto rounded-xl border border-gray-300 bg-white shadow-xl">
+                  {filteredCustomers.map((customer) => (
                     <button
-                      key={product.product_id}
+                      key={customer.customer_id}
                       type="button"
-                      onClick={() => handleSelectProduct(product)}
-                      className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-gray-100"
+                      onClick={() => handleSelectCustomer(customer)}
+                      className="flex w-full flex-col px-4 py-3 text-left hover:bg-gray-100"
                     >
-                      <div>
-                        <p className="font-semibold">{product.product_name}</p>
-                        <p className="text-xs text-gray-500">
-                          Stock: {product.stock_quantity}
-                        </p>
-                      </div>
+                      <span className="font-semibold">
+                        {customer.customer_name}
+                      </span>
 
-                      <p className="font-bold">
-                        ₱{Number(product.selling_price).toFixed(2)}
-                      </p>
+                      <span className="text-xs text-gray-500">
+                        {customer.contact_number || "No contact number"}
+                      </span>
                     </button>
                   ))}
                 </div>
               )}
             </div>
 
-            <input
-              type="number"
-              min="1"
-              value={quantity}
-              onChange={(e) => setQuantity(e.target.value)}
-              className="h-10 rounded-xl border border-gray-300 bg-white px-4 outline-none"
-            />
+            {selectedCustomer && (
+              <div className="mt-3 rounded-2xl border border-green-200 bg-green-50 p-3">
+                <p className="mb-2 text-sm font-semibold text-green-700">
+                  Existing customer selected
+                </p>
 
-            <button
-              type="button"
-              onClick={handleAddItem}
-              className="h-10 rounded-xl bg-[#3693a8] text-white shadow-md transition hover:scale-105"
-            >
-              Add
-            </button>
-          </div>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="text-gray-500">Contact Number</p>
+                    <p className="font-semibold">
+                      {selectedCustomer.contact_number || "N/A"}
+                    </p>
+                  </div>
 
-          {selectedProduct && (
-            <p className="mt-2 text-sm text-gray-500">
-              Selected: {selectedProduct.product_name} • Stock:{" "}
-              {selectedProduct.stock_quantity}
-            </p>
-          )}
-        </div>
-
-        <div className="overflow-hidden rounded-2xl border border-gray-300 bg-white">
-          <div className="grid grid-cols-5 border-b border-gray-300 bg-gray-50 px-5 py-3 text-sm font-semibold">
-            <p>Product</p>
-            <p className="text-center">Quantity</p>
-            <p className="text-center">Price</p>
-            <p className="text-right">Amount</p>
-            <p></p>
-          </div>
-
-          <div className="min-h-[120px] px-5 py-3">
-            {invoiceItems.length === 0 ? (
-              <p className="py-8 text-center text-gray-400">
-                No items added yet.
-              </p>
-            ) : (
-              invoiceItems.map((item) => (
-                <div
-                  key={item.product_id}
-                  className="grid grid-cols-5 items-center py-2 text-sm"
-                >
-                  <p>{item.product_name}</p>
-                  <p className="text-center">{item.quantity}</p>
-                  <p className="text-center">
-                    ₱{item.selling_price.toFixed(2)}
-                  </p>
-                  <p className="text-right font-medium">
-                    ₱{item.subtotal.toFixed(2)}
-                  </p>
-
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveItem(item.product_id)}
-                    className="text-right text-sm font-bold text-red-500"
-                  >
-                    Remove
-                  </button>
+                  <div>
+                    <p className="text-gray-500">Email Address</p>
+                    <p className="font-semibold">
+                      {selectedCustomer.email || "N/A"}
+                    </p>
+                  </div>
                 </div>
-              ))
+              </div>
+            )}
+
+            {!selectedCustomer && customerName.trim() && (
+              <div className="mt-3 rounded-2xl border border-[#3693a8]/20 bg-[#3693a8]/5 p-3">
+                <p className="mb-2 text-sm font-semibold text-[#3693a8]">
+                  New customer details
+                </p>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <input
+                    type="text"
+                    placeholder="Contact number"
+                    value={contactNumber}
+                    onChange={(e) => setContactNumber(e.target.value)}
+                    className="h-10 rounded-xl border border-gray-300 bg-white px-4 outline-none"
+                  />
+
+                  <input
+                    type="email"
+                    placeholder="Email optional"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="h-10 rounded-xl border border-gray-300 bg-white px-4 outline-none"
+                  />
+                </div>
+              </div>
             )}
           </div>
 
-          <div className="flex justify-end border-t border-gray-300 px-5 py-4">
-            <div className="flex items-center gap-6">
-              <p className="text-base font-semibold">Total</p>
+          <div className="mb-5">
+            <label className="mb-2 block text-base font-semibold">
+              Add Item
+            </label>
 
-              <h2 className="text-2xl font-black">
-                ₱{totalAmount.toFixed(2)}
-              </h2>
+            <div className="grid grid-cols-[1fr_90px_110px] gap-3">
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Search product..."
+                  value={productSearch}
+                  onChange={(e) => {
+                    setProductSearch(e.target.value);
+                    setSelectedProduct(null);
+                  }}
+                  className="h-10 w-full rounded-xl border border-gray-300 bg-white px-4 outline-none"
+                />
+
+                {filteredProducts.length > 0 && (
+                  <div className="absolute left-0 top-[44px] z-[120] max-h-[190px] w-full overflow-y-auto rounded-xl border border-gray-300 bg-white shadow-xl">
+                    {filteredProducts.map((product) => (
+                      <button
+                        key={product.product_id}
+                        type="button"
+                        onClick={() => handleSelectProduct(product)}
+                        className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-gray-100"
+                      >
+                        <div>
+                          <p className="font-semibold">
+                            {product.product_name}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            Stock: {product.stock_quantity}
+                          </p>
+                        </div>
+
+                        <p className="font-bold">
+                          ₱{Number(product.selling_price).toFixed(2)}
+                        </p>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <input
+                type="number"
+                min="1"
+                value={quantity}
+                onChange={(e) => setQuantity(e.target.value)}
+                className="h-10 rounded-xl border border-gray-300 bg-white px-4 outline-none"
+              />
+
+              <button
+                type="button"
+                onClick={handleAddItem}
+                className="h-10 rounded-xl bg-[#3693a8] text-white shadow-md transition hover:scale-105"
+              >
+                Add
+              </button>
+            </div>
+
+            {selectedProduct && (
+              <p className="mt-2 text-sm text-gray-500">
+                Selected: {selectedProduct.product_name} • Stock:{" "}
+                {selectedProduct.stock_quantity}
+              </p>
+            )}
+          </div>
+
+          <div className="overflow-hidden rounded-2xl border border-gray-300 bg-white">
+            <div className="grid grid-cols-5 border-b border-gray-300 bg-gray-50 px-5 py-3 text-sm font-semibold">
+              <p>Product</p>
+              <p className="text-center">Quantity</p>
+              <p className="text-center">Price</p>
+              <p className="text-right">Amount</p>
+              <p></p>
+            </div>
+
+            <div className="min-h-[120px] px-5 py-3">
+              {invoiceItems.length === 0 ? (
+                <p className="py-8 text-center text-gray-400">
+                  No items added yet.
+                </p>
+              ) : (
+                invoiceItems.map((item) => (
+                  <div
+                    key={item.product_id}
+                    className="grid grid-cols-5 items-center py-2 text-sm"
+                  >
+                    <p>{item.product_name}</p>
+
+                    <p className="text-center">{item.quantity}</p>
+
+                    <p className="text-center">
+                      ₱{item.selling_price.toFixed(2)}
+                    </p>
+
+                    <p className="text-right font-medium">
+                      ₱{item.subtotal.toFixed(2)}
+                    </p>
+
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveItem(item.product_id)}
+                      className="text-right text-sm font-bold text-red-500"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="flex justify-end border-t border-gray-300 px-5 py-4">
+              <div className="flex items-center gap-6">
+                <p className="text-base font-semibold">Total</p>
+
+                <h2 className="text-2xl font-black">
+                  ₱{totalAmount.toFixed(2)}
+                </h2>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="mt-5 flex items-center justify-between">
-          <button
-            type="button"
-            onClick={handleCancel}
-            disabled={saving}
-            className="rounded-xl bg-[#cf7f88] px-7 py-2.5 text-white shadow-md transition hover:scale-105 disabled:opacity-60"
-          >
-            Cancel
-          </button>
-
-          <div className="flex gap-4">
+          <div className="mt-5 flex items-center justify-between">
             <button
               type="button"
-              onClick={handleSaveInvoice}
+              onClick={handleCancel}
               disabled={saving}
-              className="rounded-xl bg-[#4F7DF3] px-7 py-2.5 text-white shadow-md transition hover:scale-105 disabled:opacity-60"
+              className="rounded-xl bg-[#cf7f88] px-7 py-2.5 text-white shadow-md transition hover:scale-105 disabled:opacity-60"
             >
-              {saving ? "Saving..." : "Save"}
+              Cancel
             </button>
 
             <button
               type="button"
-              onClick={handlePrintInvoice}
+              onClick={handleProceedToPayment}
               disabled={saving}
               className="rounded-xl bg-[#3693a8] px-7 py-2.5 text-white shadow-md transition hover:scale-105 disabled:opacity-60"
             >
-              {saving ? "Printing..." : "Print"}
+              Proceed to Payment →
             </button>
           </div>
         </div>
       </div>
-    </div>
+
+      <PaymentDetailsModal
+        open={paymentDetailsOpen}
+        onClose={() => setPaymentDetailsOpen(false)}
+        items={invoiceItems}
+        total={totalAmount}
+        saving={saving}
+        onSave={handleSaveInvoice}
+        onPrint={handlePrintInvoice}
+      />
+
+      <PaymentActionModal
+        open={paymentActionsOpen}
+        onClose={() => {
+          resetForm();
+          setPaymentActionsOpen(false);
+          setSavedInvoice(null);
+          onClose();
+        }}
+        onPrintReceipt={() => {
+          if (!savedInvoice) return;
+          openPrintWindow(savedInvoice, 420, 650);
+        }}
+        onPrintInvoice={() => {
+          if (!savedInvoice) return;
+
+          const invoiceHTML = generateInvoiceHTML(savedInvoice);
+
+          const printWindow = window.open("", "_blank", "width=900,height=700");
+
+          if (!printWindow) {
+            alert("Please allow popups");
+            return;
+          }
+
+          printWindow.document.write(invoiceHTML);
+          printWindow.document.close();
+        }}
+        onSavePDF={() => {
+          alert("Save PDF coming soon");
+        }}
+        onSendEmail={() => {
+          alert("Email feature coming soon");
+        }}
+      />
+    </>
   );
 }
