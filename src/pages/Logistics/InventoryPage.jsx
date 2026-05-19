@@ -4,6 +4,7 @@ import AppLayout from "../../components/layout/AppLayout/AppLayout";
 import { logisticsLinks } from "../../constants/sidebarLinks";
 import { supabase } from "../../lib/supabaseClient";
 import EditProductModal from "../../components/modals/EditProductModal";
+import AdjustStockModal from "../../components/modals/AdjustStockModal";
 
 export default function InventoryPage() {
   const [products, setProducts] = useState([]);
@@ -12,7 +13,10 @@ export default function InventoryPage() {
   const [selectedHistoryGroup, setSelectedHistoryGroup] = useState(null);
 
   const [editOpen, setEditOpen] = useState(false);
+  const [adjustOpen, setAdjustOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
+
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     let ignore = false;
@@ -41,6 +45,7 @@ export default function InventoryPage() {
           quantity,
           previous_stock,
           new_stock,
+          reason,
           created_at,
           products (
             product_name
@@ -133,6 +138,7 @@ export default function InventoryPage() {
         quantity,
         previous_stock,
         new_stock,
+        reason,
         created_at,
         products (
           product_name
@@ -165,6 +171,16 @@ export default function InventoryPage() {
     setSelectedProduct(null);
   }
 
+  function handleAdjustProduct(product) {
+    setSelectedProduct(product);
+    setAdjustOpen(true);
+  }
+
+  function handleCloseAdjust() {
+    setAdjustOpen(false);
+    setSelectedProduct(null);
+  }
+
   function formatDateTime(dateValue) {
     return new Date(dateValue).toLocaleString("en-PH", {
       month: "short",
@@ -178,28 +194,18 @@ export default function InventoryPage() {
   function getMovementDisplay(type) {
     if (type === "restock") return { icon: "🟢", label: "Restock" };
     if (type === "sale") return { icon: "🔴", label: "Sale" };
-    if (type === "initial_stock") return { icon: "🔵", label: " Added Product" };
+    if (type === "initial_stock") return { icon: "🔵", label: "Added Product" };
     if (type === "adjustment") return { icon: "🟡", label: "Adjustment" };
 
     return { icon: "⚪", label: "Update" };
   }
 
-  function numberToWords(number) {
-    const words = [
-      "Zero",
-      "One",
-      "Two",
-      "Three",
-      "Four",
-      "Five",
-      "Six",
-      "Seven",
-      "Eight",
-      "Nine",
-      "Ten",
-    ];
+  function formatRole(role) {
+    if (role === "logistics") return "Logistic";
+    if (role === "cashier") return "Cashier";
+    if (role === "admin") return "Admin";
 
-    return words[number] || number;
+    return "User";
   }
 
   function formatGroupText(group) {
@@ -208,14 +214,10 @@ export default function InventoryPage() {
       0,
     );
 
-    const itemWord = numberToWords(itemCount);
-    const itemText = `${itemWord} (${itemCount}) item${itemCount > 1 ? "s" : ""}`;
+    const itemText = `${itemCount} item${itemCount > 1 ? "s" : ""}`;
 
-    const role = group.items[0]?.users?.role || "User";
-    const roleName =
-      role === "logistics"
-        ? "Logistic"
-        : role.charAt(0).toUpperCase() + role.slice(1);
+    const role = group.items[0]?.users?.role || "user";
+    const roleName = formatRole(role);
 
     if (group.movement_type === "sale") {
       return `${roleName} sold ${itemText}.`;
@@ -240,11 +242,31 @@ export default function InventoryPage() {
     if (type === "sale") return "-";
     if (type === "restock") return "+";
     if (type === "initial_stock") return "+";
+
     return "";
   }
 
+  const filteredProducts = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+
+    if (!term) return products;
+
+    return products.filter((product) => {
+      const name = product.product_name?.toLowerCase() || "";
+
+      const status =
+        product.status === "inactive"
+          ? "inactive"
+          : product.stock_quantity <= Number(product.reorder_level || 10)
+            ? "low stock"
+            : "in stock";
+
+      return name.includes(term) || status.includes(term);
+    });
+  }, [products, searchTerm]);
+
   return (
-    <AppLayout links={logisticsLinks}>
+    <AppLayout links={logisticsLinks} onSearch={setSearchTerm}>
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-4xl font-black">INVENTORY</h1>
 
@@ -258,7 +280,7 @@ export default function InventoryPage() {
       </div>
 
       <div className="rounded-2xl bg-[#f4f4f4] p-6 shadow-md">
-        <div className="grid grid-cols-[1.4fr_120px_140px_140px_160px_120px] border-b border-gray-300 pb-5 text-sm font-semibold">
+        <div className="grid grid-cols-[1.4fr_120px_140px_140px_160px_170px] border-b border-gray-300 pb-5 text-sm font-semibold">
           <p>Product Name</p>
           <p className="text-center">Quantity</p>
           <p className="text-center">Price</p>
@@ -268,15 +290,15 @@ export default function InventoryPage() {
         </div>
 
         <div className="divide-y divide-gray-200">
-          {products.length === 0 ? (
+          {filteredProducts.length === 0 ? (
             <div className="flex h-[420px] items-center justify-center text-gray-400">
               No products found.
             </div>
           ) : (
-            products.map((product) => (
+            filteredProducts.map((product) => (
               <div
                 key={product.product_id}
-                className="grid grid-cols-[1.4fr_120px_140px_140px_160px_120px] items-center py-5 text-sm"
+                className="grid grid-cols-[1.4fr_120px_140px_140px_160px_170px] items-center py-5 text-sm"
               >
                 <p>{product.product_name}</p>
 
@@ -310,13 +332,21 @@ export default function InventoryPage() {
                   </span>
                 </div>
 
-                <div className="flex justify-center">
+                <div className="flex justify-center gap-2">
                   <button
                     type="button"
                     onClick={() => handleEditProduct(product)}
                     className="rounded-lg bg-[#3693a8] px-4 py-2 text-xs font-semibold text-white shadow-md transition hover:scale-105"
                   >
                     Edit
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleAdjustProduct(product)}
+                    className="rounded-lg bg-[#7C6FF0] px-4 py-2 text-xs font-semibold text-white shadow-md transition hover:scale-105"
+                  >
+                    Adjust
                   </button>
                 </div>
               </div>
@@ -372,22 +402,35 @@ export default function InventoryPage() {
                     {selectedHistoryGroup.items.map((item, index) => (
                       <div
                         key={item.movement_id}
-                        className="grid grid-cols-[50px_1fr_100px_130px] items-center border border-black px-5 py-3 text-sm"
+                        className="grid grid-cols-[50px_1fr_120px] items-center border border-black px-5 py-4 text-sm"
                       >
+                        {/* NUMBER */}
                         <p>{index + 1}</p>
 
-                        <p>
-                          {item.products?.product_name || "Unknown Product"}
-                        </p>
+                        {/* PRODUCT + REASON */}
+                        <div>
+                          <p className="font-medium">
+                            {item.products?.product_name || "Unknown Product"}
+                          </p>
 
-                        <p className="text-center font-semibold">
-                          {getQuantitySign(item.movement_type)}
-                          {item.quantity}
-                        </p>
+                          {item.reason && (
+                            <p className="mt-1 text-xs italic text-gray-400">
+                              {item.reason}
+                            </p>
+                          )}
+                        </div>
 
-                        <p className="text-right text-xs text-gray-500">
-                          {item.previous_stock} → {item.new_stock}
-                        </p>
+                        {/* QUANTITY + STOCK CHANGE */}
+                        <div className="text-right">
+                          <p className="font-semibold text-black">
+                            {getQuantitySign(item.movement_type)}
+                            {item.quantity}
+                          </p>
+
+                          <p className="mt-1 text-xs text-gray-500">
+                            {item.previous_stock} → {item.new_stock}
+                          </p>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -434,6 +477,15 @@ export default function InventoryPage() {
           open={editOpen}
           product={selectedProduct}
           onClose={handleCloseEdit}
+        />
+      )}
+
+      {adjustOpen && selectedProduct && (
+        <AdjustStockModal
+          key={selectedProduct.product_id}
+          open={adjustOpen}
+          product={selectedProduct}
+          onClose={handleCloseAdjust}
         />
       )}
     </AppLayout>

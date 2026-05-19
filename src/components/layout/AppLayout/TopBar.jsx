@@ -5,7 +5,10 @@ import { Search } from "lucide-react";
 import UserAvatarIcon from "../../auth/UserAvatarIcon";
 import { supabase } from "../../../lib/supabaseClient";
 
-export default function TopBar({ onSearch }) {
+export default function TopBar({
+  onSearch = null,
+  showSearch = true,
+}) {
   const navigate = useNavigate();
 
   const [menuOpen, setMenuOpen] = useState(false);
@@ -25,30 +28,48 @@ export default function TopBar({ onSearch }) {
     navigate("/login", { replace: true });
   }
 
-  function handleSearch() {
-    onSearch(searchValue);
+  function handleSearch(value = searchValue) {
+    if (onSearch) {
+      onSearch(value);
+    }
   }
 
   return (
     <header className="fixed left-0 top-0 z-20 flex h-[70px] w-full items-center justify-end bg-[#3693a8] px-5">
-      <div className="flex items-center gap-4">
-        <input
-          type="text"
-          placeholder="Search..."
-          value={searchValue}
-          onChange={(e) => setSearchValue(e.target.value)}
-          className="h-9 w-[210px] rounded-full bg-[#b9d8d6] px-4 text-sm italic text-white outline-none placeholder:text-white"
-        />
+      <div className="flex items-center">
+        {/* SEARCH */}
+        {showSearch && (
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              placeholder="Search..."
+              value={searchValue}
+              onChange={(e) => {
+                const value = e.target.value;
 
-        <button
-          type="button"
-          onClick={handleSearch}
-          className="transition hover:scale-110"
-        >
-          <Search className="h-7 w-7 text-white" />
-        </button>
+                setSearchValue(value);
+                handleSearch(value);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  handleSearch();
+                }
+              }}
+              className="h-9 w-[230px] rounded-full bg-[#b9d8d6] px-4 text-sm italic text-black outline-none placeholder:text-black/50"
+            />
 
-        <div className="relative">
+            <button
+              type="button"
+              onClick={() => handleSearch()}
+              className="flex h-9 w-9 items-center justify-center rounded-full transition hover:bg-white/10"
+            >
+              <Search className="h-6 w-6 text-white" />
+            </button>
+          </div>
+        )}
+
+        {/* PROFILE */}
+        <div className="relative ml-5">
           <button
             type="button"
             onClick={() => setMenuOpen(!menuOpen)}
@@ -68,6 +89,7 @@ export default function TopBar({ onSearch }) {
               </div>
 
               <button
+                type="button"
                 onClick={handleLogout}
                 className="w-full rounded-lg bg-[#d93f74] py-2 font-bold text-white transition hover:scale-105"
               >

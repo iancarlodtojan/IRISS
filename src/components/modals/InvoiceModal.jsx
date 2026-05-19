@@ -217,7 +217,7 @@ export default function InvoiceModal({ open, onClose }) {
     return `INV-${Date.now()}`;
   }
 
-  async function saveInvoiceToDatabase() {
+  async function saveInvoiceToDatabase(paymentData) {
     if (invoiceItems.length === 0) {
       throw new Error("Please add at least one item");
     }
@@ -265,8 +265,8 @@ export default function InvoiceModal({ open, onClose }) {
     const { error: paymentError } = await supabase.from("payments").insert({
       order_id: order.order_id,
       user_id: user.id,
-      payment_method: "cash",
-      amount_paid: totalAmount,
+      payment_method: paymentData.paymentMethod,
+      amount_paid: paymentData.paidAmount,
       payment_status: "paid",
     });
 
@@ -656,11 +656,11 @@ export default function InvoiceModal({ open, onClose }) {
     setPaymentDetailsOpen(true);
   }
 
-  async function handleSaveInvoice() {
+  async function handleSaveInvoice(paymentData) {
     try {
       setSaving(true);
 
-      const invoice = await saveInvoiceToDatabase();
+      const invoice = await saveInvoiceToDatabase(paymentData);
 
       alert(`Invoice saved successfully: ${invoice.invoiceNumber}`);
 
@@ -675,11 +675,11 @@ export default function InvoiceModal({ open, onClose }) {
     }
   }
 
-  async function handlePrintInvoice() {
+  async function handlePrintInvoice(paymentData) {
     try {
       setSaving(true);
 
-      const invoice = await saveInvoiceToDatabase();
+      const invoice = await saveInvoiceToDatabase(paymentData);
 
       setSavedInvoice(invoice);
       setPaymentDetailsOpen(false);

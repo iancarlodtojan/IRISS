@@ -36,7 +36,7 @@ export default function DashboardPage() {
           )
         `)
         .order("created_at", { ascending: false })
-        .limit(5);
+        .limit(3);
 
       if (productsError) {
         console.error(productsError);

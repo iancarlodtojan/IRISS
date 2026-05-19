@@ -4,10 +4,13 @@ import AppLayout from "../../components/layout/AppLayout/AppLayout";
 import { cashierLinks } from "../../constants/sidebarLinks";
 import { supabase } from "../../lib/supabaseClient";
 import { Filter, X } from "lucide-react";
+import InvoiceDetailsModal from "../../components/modals/InvoiceDetailsModal";
 
 export default function LogsPage() {
   const [orders, setOrders] = useState([]);
   const [filterOpen, setFilterOpen] = useState(false);
+  const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [invoiceDetailsOpen, setInvoiceDetailsOpen] = useState(false);
 
   const [appliedSortType, setAppliedSortType] = useState("monthly");
   const [appliedYear, setAppliedYear] = useState("2026");
@@ -19,20 +22,9 @@ export default function LogsPage() {
   const [draftMonth, setDraftMonth] = useState(5);
   const [draftDay, setDraftDay] = useState("");
 
-  const months = [
-    "JAN",
-    "FEB",
-    "MAR",
-    "APR",
-    "MAY",
-    "JUN",
-    "JUL",
-    "AUG",
-    "SEP",
-    "OCT",
-    "NOV",
-    "DEC",
-  ];
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
 
   useEffect(() => {
     let ignore = false;
@@ -59,37 +51,15 @@ export default function LogsPage() {
         return;
       }
 
-      if (!ignore) {
-        setOrders(data || []);
-      }
+      if (!ignore) setOrders(data || []);
     }
 
     loadOrders();
 
     const channel = supabase
       .channel("orders-realtime")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "orders",
-        },
-        () => {
-          loadOrders();
-        },
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "order_items",
-        },
-        () => {
-          loadOrders();
-        },
-      )
+      .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, loadOrders)
+      .on("postgres_changes", { event: "*", schema: "public", table: "order_items" }, loadOrders)
       .subscribe();
 
     return () => {
@@ -99,9 +69,10 @@ export default function LogsPage() {
   }, []);
 
   const filteredOrders = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+
     return orders.filter((order) => {
       const date = new Date(order.created_at);
-
       const year = date.getFullYear();
       const month = date.getMonth() + 1;
       const day = date.getDate();
@@ -110,12 +81,17 @@ export default function LogsPage() {
       if (month !== appliedMonth) return false;
 
       if (appliedSortType === "daily" && appliedDay) {
-        return day === Number(appliedDay);
+        if (day !== Number(appliedDay)) return false;
       }
 
-      return true;
+      if (!term) return true;
+
+      const invoice = order.invoice_number?.toLowerCase() || "";
+      const customer = order.customers?.customer_name?.toLowerCase() || "";
+
+      return invoice.includes(term) || customer.includes(term);
     });
-  }, [orders, appliedYear, appliedMonth, appliedDay, appliedSortType]);
+  }, [orders, appliedYear, appliedMonth, appliedDay, appliedSortType, searchTerm]);
 
   const daysInMonth = useMemo(() => {
     return new Date(Number(draftYear), draftMonth, 0).getDate();
@@ -138,12 +114,52 @@ export default function LogsPage() {
     return `${formattedDate} • ${formattedTime}`;
   }
 
+  async function handleOpenInvoiceDetails(orderId) {
+    const { data, error } = await supabase
+      .from("orders")
+      .select(`
+        order_id,
+        invoice_number,
+        total_amount,
+        created_at,
+        customers (
+          customer_name,
+          contact_number,
+          email
+        ),
+        order_items (
+          order_item_id,
+          quantity,
+          unit_price,
+          subtotal,
+          products (
+            product_name
+          )
+        ),
+        payments (
+          payment_method,
+          amount_paid,
+          payment_status
+        )
+      `)
+      .eq("order_id", orderId)
+      .single();
+
+    if (error) {
+      console.error(error);
+      alert(error.message);
+      return;
+    }
+
+    setSelectedInvoice(data);
+    setInvoiceDetailsOpen(true);
+  }
+
   function openFilter() {
     setDraftSortType(appliedSortType);
     setDraftYear(appliedYear);
     setDraftMonth(appliedMonth);
     setDraftDay(appliedDay);
-
     setFilterOpen(true);
   }
 
@@ -152,12 +168,11 @@ export default function LogsPage() {
     setAppliedYear(draftYear);
     setAppliedMonth(draftMonth);
     setAppliedDay(draftDay);
-
     setFilterOpen(false);
   }
 
   return (
-    <AppLayout links={cashierLinks}>
+    <AppLayout links={cashierLinks} onSearch={setSearchTerm}>
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-4xl font-black">LOGBOOK</h1>
 
@@ -172,16 +187,11 @@ export default function LogsPage() {
       </div>
 
       <div className="min-h-[650px] rounded-2xl bg-[#f4f4f4] p-6 shadow-md">
-        {/* HEADER */}
         <div className="grid grid-cols-[240px_1fr_1fr_140px_160px] border-b border-gray-300 pb-5 text-sm font-semibold text-black">
           <p>Date & Time</p>
-
           <p className="text-center">Invoice No.</p>
-
           <p className="text-center">Customer Name</p>
-
           <p className="text-center">No. of Items</p>
-
           <p className="text-right">Total</p>
         </div>
 
@@ -199,46 +209,37 @@ export default function LogsPage() {
                 ) || 0;
 
               return (
-                <div
+                <button
                   key={order.order_id}
-                  className="grid grid-cols-[240px_1fr_1fr_140px_160px] items-center py-5 text-sm"
+                  type="button"
+                  onClick={() => handleOpenInvoiceDetails(order.order_id)}
+                  className="grid w-full grid-cols-[240px_1fr_1fr_140px_160px] items-center py-5 text-left text-sm transition hover:bg-white/70"
                 >
-                  <p className="whitespace-nowrap">
-                    {formatDate(order.created_at)}
-                  </p>
+                  <p className="whitespace-nowrap">{formatDate(order.created_at)}</p>
+
+                  <p className="text-center">{order.invoice_number}</p>
 
                   <p className="text-center">
-                    {order.invoice_number}
+                    {order.customers?.customer_name || "Walk-in Customer"}
                   </p>
 
-                  <p className="text-center">
-                    {order.customers?.customer_name ||
-                      "Walk-in Customer"}
-                  </p>
-
-                  <p className="text-center font-semibold">
-                    {totalItems}
-                  </p>
+                  <p className="text-center font-semibold">{totalItems}</p>
 
                   <p className="text-right font-semibold">
-                    ₱
-                    {Number(order.total_amount).toFixed(2)}
+                    ₱{Number(order.total_amount).toFixed(2)}
                   </p>
-                </div>
+                </button>
               );
             })}
           </div>
         )}
       </div>
 
-      {/* FILTER MODAL */}
       {filterOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/30 backdrop-blur-sm">
           <div className="h-[560px] w-[620px] overflow-hidden rounded-2xl bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b border-gray-300 px-6 py-4">
-              <h2 className="text-2xl font-black">
-                Filters
-              </h2>
+              <h2 className="text-2xl font-black">Filters</h2>
 
               <button
                 type="button"
@@ -251,29 +252,18 @@ export default function LogsPage() {
 
             <div className="h-[calc(560px-80px)] overflow-y-auto px-6 py-5">
               <div className="mb-5">
-                <p className="mb-3 font-bold">
-                  Sort Type
-                </p>
+                <p className="mb-3 font-bold">Sort Type</p>
 
                 <div className="grid grid-cols-2 gap-4">
                   <button
                     type="button"
-                    onClick={() =>
-                      setDraftSortType("daily")
-                    }
+                    onClick={() => setDraftSortType("daily")}
                     className={`rounded-xl border p-4 text-left transition ${
-                      draftSortType === "daily"
-                        ? "border-black"
-                        : "border-gray-300"
+                      draftSortType === "daily" ? "border-black" : "border-gray-300"
                     }`}
                   >
-                    <p className="font-semibold">
-                      Daily
-                    </p>
-
-                    <p className="text-xs text-gray-500">
-                      Display invoices by day
-                    </p>
+                    <p className="font-semibold">Daily</p>
+                    <p className="text-xs text-gray-500">Display invoices by day</p>
                   </button>
 
                   <button
@@ -283,18 +273,11 @@ export default function LogsPage() {
                       setDraftDay("");
                     }}
                     className={`rounded-xl border p-4 text-left transition ${
-                      draftSortType === "monthly"
-                        ? "border-black"
-                        : "border-gray-300"
+                      draftSortType === "monthly" ? "border-black" : "border-gray-300"
                     }`}
                   >
-                    <p className="font-semibold">
-                      Monthly
-                    </p>
-
-                    <p className="text-xs text-gray-500">
-                      Display invoices by month
-                    </p>
+                    <p className="font-semibold">Monthly</p>
+                    <p className="text-xs text-gray-500">Display invoices by month</p>
                   </button>
                 </div>
               </div>
@@ -305,9 +288,7 @@ export default function LogsPage() {
                 <input
                   type="number"
                   value={draftYear}
-                  onChange={(e) =>
-                    setDraftYear(e.target.value)
-                  }
+                  onChange={(e) => setDraftYear(e.target.value)}
                   className="h-12 w-[140px] rounded-xl border border-gray-300 px-4 outline-none"
                 />
               </div>
@@ -325,9 +306,7 @@ export default function LogsPage() {
                         setDraftDay("");
                       }}
                       className={`h-10 rounded-xl border text-sm transition ${
-                        draftMonth === index + 1
-                          ? "border-black"
-                          : "border-gray-300"
+                        draftMonth === index + 1 ? "border-black" : "border-gray-300"
                       }`}
                     >
                       {month}
@@ -338,34 +317,27 @@ export default function LogsPage() {
 
               {draftSortType === "daily" && (
                 <div className="mb-5">
-                  <p className="mb-3 font-bold">
-                    Day
-                  </p>
+                  <p className="mb-3 font-bold">Day</p>
 
                   <div className="grid grid-cols-7 gap-2">
-                    {Array.from(
-                      { length: daysInMonth },
-                      (_, index) => {
-                        const day = index + 1;
+                    {Array.from({ length: daysInMonth }, (_, index) => {
+                      const day = index + 1;
 
-                        return (
-                          <button
-                            key={day}
-                            type="button"
-                            onClick={() =>
-                              setDraftDay(String(day))
-                            }
-                            className={`h-8 rounded-full border text-xs transition ${
-                              Number(draftDay) === day
-                                ? "border-black bg-gray-100"
-                                : "border-gray-300"
-                            }`}
-                          >
-                            {day}
-                          </button>
-                        );
-                      },
-                    )}
+                      return (
+                        <button
+                          key={day}
+                          type="button"
+                          onClick={() => setDraftDay(String(day))}
+                          className={`h-8 rounded-full border text-xs transition ${
+                            Number(draftDay) === day
+                              ? "border-black bg-gray-100"
+                              : "border-gray-300"
+                          }`}
+                        >
+                          {day}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -383,6 +355,16 @@ export default function LogsPage() {
           </div>
         </div>
       )}
+
+      <InvoiceDetailsModal
+        open={invoiceDetailsOpen}
+        invoice={selectedInvoice}
+        onClose={() => {
+          setInvoiceDetailsOpen(false);
+          setSelectedInvoice(null);
+        }}
+      />
     </AppLayout>
   );
 }
+

@@ -9,6 +9,7 @@ export default function ItemsPage() {
   const [stockMovements, setStockMovements] = useState([]);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [selectedHistoryGroup, setSelectedHistoryGroup] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     let ignore = false;
@@ -32,12 +33,14 @@ export default function ItemsPage() {
     async function loadStockHistoryRealtime() {
       const { data, error } = await supabase
         .from("stock_movements")
-        .select(`
+        .select(
+          `
           movement_id,
           movement_type,
           quantity,
           previous_stock,
           new_stock,
+          reason,
           created_at,
           products (
             product_name
@@ -46,7 +49,8 @@ export default function ItemsPage() {
             full_name,
             role
           )
-        `)
+        `,
+        )
         .order("created_at", { ascending: false });
 
       if (error) {
@@ -128,12 +132,14 @@ export default function ItemsPage() {
   async function loadStockHistory() {
     const { data, error } = await supabase
       .from("stock_movements")
-      .select(`
+      .select(
+        `
         movement_id,
         movement_type,
         quantity,
         previous_stock,
         new_stock,
+        reason,
         created_at,
         products (
           product_name
@@ -142,7 +148,8 @@ export default function ItemsPage() {
           full_name,
           role
         )
-      `)
+      `,
+      )
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -207,24 +214,6 @@ export default function ItemsPage() {
     };
   }
 
-  function numberToWords(number) {
-    const words = [
-      "Zero",
-      "One",
-      "Two",
-      "Three",
-      "Four",
-      "Five",
-      "Six",
-      "Seven",
-      "Eight",
-      "Nine",
-      "Ten",
-    ];
-
-    return words[number] || number;
-  }
-
   function formatRole(role) {
     if (role === "logistics") return "Logistic";
     if (role === "cashier") return "Cashier";
@@ -239,10 +228,7 @@ export default function ItemsPage() {
       0,
     );
 
-    const itemWord = numberToWords(itemCount);
-    const itemText = `${itemWord} (${itemCount}) item${
-      itemCount > 1 ? "s" : ""
-    }`;
+    const itemText = `${itemCount} item${itemCount > 1 ? "s" : ""}`;
 
     const role = group.items[0]?.users?.role || "user";
     const roleName = formatRole(role);
@@ -273,9 +259,27 @@ export default function ItemsPage() {
 
     return "";
   }
+  // Add this before return
+  const filteredProducts = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+
+    if (!term) return products;
+
+    return products.filter((product) => {
+      const name = product.product_name?.toLowerCase() || "";
+      const status =
+        product.status === "inactive"
+          ? "inactive"
+          : product.stock_quantity <= Number(product.reorder_level || 10)
+            ? "low stock"
+            : "in stock";
+
+      return name.includes(term) || status.includes(term);
+    });
+  }, [products, searchTerm]);
 
   return (
-    <AppLayout links={cashierLinks}>
+    <AppLayout links={cashierLinks} onSearch={setSearchTerm}>
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-4xl font-black">INVENTORY</h1>
 
@@ -298,12 +302,12 @@ export default function ItemsPage() {
         </div>
 
         <div className="divide-y divide-gray-200">
-          {products.length === 0 ? (
+          {filteredProducts.length === 0 ? (
             <div className="flex h-[420px] items-center justify-center text-gray-400">
               No products found.
             </div>
           ) : (
-            products.map((product) => (
+            filteredProducts.map((product) => (
               <div
                 key={product.product_id}
                 className="grid grid-cols-5 items-center py-5 text-sm"
@@ -377,9 +381,8 @@ export default function ItemsPage() {
                   <div className="mb-5">
                     <h3 className="text-2xl font-black">
                       {
-                        getMovementDisplay(
-                          selectedHistoryGroup.movement_type,
-                        ).label
+                        getMovementDisplay(selectedHistoryGroup.movement_type)
+                          .label
                       }{" "}
                       Details
                     </h3>
@@ -393,20 +396,35 @@ export default function ItemsPage() {
                     {selectedHistoryGroup.items.map((item, index) => (
                       <div
                         key={item.movement_id}
-                        className="grid grid-cols-[50px_1fr_100px_130px] items-center border border-black px-5 py-3 text-sm"
+                        className="grid grid-cols-[50px_1fr_120px] items-center border border-black px-5 py-4 text-sm"
                       >
+                        {/* NUMBER */}
                         <p>{index + 1}</p>
 
-                        <p>{item.products?.product_name || "Unknown Product"}</p>
+                        {/* PRODUCT + REASON */}
+                        <div>
+                          <p className="font-medium">
+                            {item.products?.product_name || "Unknown Product"}
+                          </p>
 
-                        <p className="text-center font-semibold">
-                          {getQuantitySign(item.movement_type)}
-                          {item.quantity}
-                        </p>
+                          {item.reason && (
+                            <p className="mt-1 text-xs italic text-gray-400">
+                              {item.reason}
+                            </p>
+                          )}
+                        </div>
 
-                        <p className="text-right text-xs text-gray-500">
-                          {item.previous_stock} → {item.new_stock}
-                        </p>
+                        {/* QUANTITY + STOCK CHANGE */}
+                        <div className="text-right">
+                          <p className="font-semibold text-black">
+                            {getQuantitySign(item.movement_type)}
+                            {item.quantity}
+                          </p>
+
+                          <p className="mt-1 text-xs text-gray-500">
+                            {item.previous_stock} → {item.new_stock}
+                          </p>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -449,4 +467,3 @@ export default function ItemsPage() {
     </AppLayout>
   );
 }
-

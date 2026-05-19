@@ -11,7 +11,7 @@ import AddNewProductModal from "../../modals/AddNewProductModal";
 export default function AppLayout({
   children,
   links = [],
-  onSearch = () => {},
+  onSearch = null,
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(() => {
     try {
@@ -41,18 +41,14 @@ export default function AppLayout({
     cashier: [
       {
         label: "Create Invoice",
-        onClick: () => {
-          setInvoiceOpen(true);
-        },
+        onClick: () => setInvoiceOpen(true),
       },
     ],
 
     logistics: [
       {
         label: "Add Product",
-        onClick: () => {
-          setProductActionOpen(true);
-        },
+        onClick: () => setProductActionOpen(true),
       },
     ],
   };
@@ -61,7 +57,7 @@ export default function AppLayout({
 
   return (
     <div className="min-h-screen bg-[#f4f4f4]">
-      <TopBar onSearch={onSearch} />
+      <TopBar onSearch={onSearch} showSearch={onSearch !== null} />
 
       <Sidebar
         sidebarOpen={sidebarOpen}
@@ -81,10 +77,7 @@ export default function AppLayout({
         <FloatingAddButton actions={floatingActions} />
       )}
 
-      <InvoiceModal
-        open={invoiceOpen}
-        onClose={() => setInvoiceOpen(false)}
-      />
+      <InvoiceModal open={invoiceOpen} onClose={() => setInvoiceOpen(false)} />
 
       <ProductActionModal
         open={productActionOpen}
