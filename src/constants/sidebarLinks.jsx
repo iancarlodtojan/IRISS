@@ -8,8 +8,6 @@ export const cashierLinks = [
 export const adminLinks = [ //modify later when admin pages are created
   { label: "HOME", path: "/admin/dashboard" },
   { label: "USERS", path: "/admin/users" },
-  { label: "REPORTS", path: "/admin/reports" },
-  { label: "SETTINGS", path: "/admin/settings" },
 ];
 
 export const logisticsLinks = [ //modify later when logistics pages are created

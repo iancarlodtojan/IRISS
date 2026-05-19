@@ -8,11 +8,7 @@ import ProductActionModal from "../../modals/ProductActionModal";
 import RestockProductModal from "../../modals/RestockProductModal";
 import AddNewProductModal from "../../modals/AddNewProductModal";
 
-export default function AppLayout({
-  children,
-  links = [],
-  onSearch = null,
-}) {
+export default function AppLayout({ children, links = [], onSearch = null }) {
   const [sidebarOpen, setSidebarOpen] = useState(() => {
     try {
       const raw = localStorage.getItem("sidebarOpen");
@@ -45,12 +41,6 @@ export default function AppLayout({
       },
     ],
 
-    logistics: [
-      {
-        label: "Add Product",
-        onClick: () => setProductActionOpen(true),
-      },
-    ],
   };
 
   const floatingActions = roleFloatingActions[role] || [];

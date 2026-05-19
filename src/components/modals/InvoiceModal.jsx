@@ -175,19 +175,17 @@ export default function InvoiceModal({ open, onClose }) {
   async function getOrCreateCustomer() {
     const trimmedName = customerName.trim();
 
-    if (!trimmedName) {
-      throw new Error("Customer name is required");
-    }
+    const finalName = trimmedName || "Walk-in Customer";
 
     if (selectedCustomer) {
       return selectedCustomer.customer_id;
     }
 
-    if (!contactNumber.trim()) {
+    if (trimmedName && !contactNumber.trim()) {
       throw new Error("Contact number is required for new customer");
     }
 
-    const normalizedTypedName = normalizeName(trimmedName);
+    const normalizedTypedName = normalizeName(finalName);
 
     const existingCustomer = customers.find(
       (customer) =>
@@ -201,7 +199,7 @@ export default function InvoiceModal({ open, onClose }) {
     const { data: newCustomer, error } = await supabase
       .from("customers")
       .insert({
-        customer_name: trimmedName,
+        customer_name: finalName,
         contact_number: contactNumber.trim(),
         email: email.trim() || null,
       })
@@ -315,9 +313,9 @@ export default function InvoiceModal({ open, onClose }) {
       order,
       invoiceNumber,
       customer: {
-        name: customerName.trim(),
-        contact: contactNumber.trim(),
-        email: email.trim(),
+        name: customerName.trim() || "Walk-in Customer",
+        contact: contactNumber.trim() || "N/A",
+        email: email.trim() || "",
       },
       items: invoiceItems,
       total: totalAmount,

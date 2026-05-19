@@ -10,6 +10,7 @@ import CustomersPage from "./pages/Cashier/CustomersPage";
 
 // ADMIN
 import AdminDashboardPage from "./pages/Admin/DashboardPage";
+import UsersPage from "./pages/Admin/UsersPage";
 
 // LOGISTICS
 import LogisticsDashboardPage from "./pages/Logistics/DashboardPage";
@@ -33,11 +34,8 @@ function App() {
 
         {/* ADMIN */}
         <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
+        <Route path="/admin/users" element={<UsersPage/>} />
 
-        {/* TEMP ADMIN ROUTES */}
-        <Route path="/admin/users" element={<AdminDashboardPage />} />
-        <Route path="/admin/reports" element={<AdminDashboardPage />} />
-        <Route path="/admin/settings" element={<AdminDashboardPage />} />
 
         {/* LOGISTICS */}
         <Route
