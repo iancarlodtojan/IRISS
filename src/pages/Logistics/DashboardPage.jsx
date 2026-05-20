@@ -16,14 +16,15 @@ export default function DashboardPage() {
       const { data: productsData, error: productsError } = await supabase
         .from("products")
         .select(
-          "product_id, product_name, stock_quantity, cost_price, selling_price, reorder_level, status"
+          "product_id, product_name, stock_quantity, cost_price, selling_price, reorder_level, status",
         )
         .eq("status", "active")
         .order("product_name", { ascending: true });
 
       const { data: movementsData, error: movementsError } = await supabase
         .from("stock_movements")
-        .select(`
+        .select(
+          `
           movement_id,
           movement_type,
           quantity,
@@ -34,7 +35,8 @@ export default function DashboardPage() {
           users (
             full_name
           )
-        `)
+        `,
+        )
         .order("created_at", { ascending: false })
         .limit(3);
 
@@ -65,7 +67,7 @@ export default function DashboardPage() {
           schema: "public",
           table: "products",
         },
-        loadDashboardData
+        loadDashboardData,
       )
       .on(
         "postgres_changes",
@@ -74,7 +76,7 @@ export default function DashboardPage() {
           schema: "public",
           table: "stock_movements",
         },
-        loadDashboardData
+        loadDashboardData,
       )
       .subscribe();
 
@@ -91,7 +93,7 @@ export default function DashboardPage() {
   const totalStocks = useMemo(() => {
     return products.reduce(
       (sum, product) => sum + Number(product.stock_quantity || 0),
-      0
+      0,
     );
   }, [products]);
 
@@ -101,17 +103,11 @@ export default function DashboardPage() {
         const stock = Number(product.stock_quantity || 0);
         const reorderLevel = Number(product.reorder_level || 10);
 
-        return stock > 0 && stock <= reorderLevel;
+        return stock <= reorderLevel;
       })
       .sort(
-        (a, b) => Number(a.stock_quantity || 0) - Number(b.stock_quantity || 0)
+        (a, b) => Number(a.stock_quantity || 0) - Number(b.stock_quantity || 0),
       );
-  }, [products]);
-
-  const outOfStockProducts = useMemo(() => {
-    return products.filter(
-      (product) => Number(product.stock_quantity || 0) === 0
-    );
   }, [products]);
 
   const inventoryValue = useMemo(() => {
@@ -145,7 +141,6 @@ export default function DashboardPage() {
     <AppLayout links={logisticsLinks}>
       <h1 className="mb-8 text-4xl font-black">DASHBOARD</h1>
 
-      {/* INVENTORY CARDS */}
       <div className="mb-8 grid grid-cols-4 gap-6">
         <div className="rounded-2xl bg-[#f4f4f4] p-6 shadow-md">
           <div className="mb-4 flex items-center justify-between">
@@ -167,7 +162,7 @@ export default function DashboardPage() {
 
         <div className="rounded-2xl bg-[#f4f4f4] p-6 shadow-md">
           <div className="mb-4 flex items-center justify-between">
-            <p className="text-sm text-gray-600">Low Stock Items</p>
+            <p className="text-sm text-gray-600">Stock Alerts</p>
             <AlertTriangle className="h-7 w-7" />
           </div>
 
@@ -188,33 +183,27 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* MAIN DASHBOARD CONTENT */}
       <div className="grid grid-cols-[1.2fr_1fr] gap-8">
-        {/* LOW STOCK PRODUCTS */}
         <div className="rounded-2xl bg-[#f4f4f4] p-8 shadow-md">
           <div className="mb-6 flex items-center justify-between">
-            <h2 className="text-2xl font-bold">Low Stock Products</h2>
+            <h2 className="text-2xl font-bold">Stock Alerts</h2>
 
-            <p className="text-sm text-gray-500">
-              Needs restocking soon
-            </p>
+            <p className="text-sm text-gray-500">Needs restocking soon</p>
           </div>
 
           {lowStockProducts.length === 0 ? (
             <div className="flex h-[260px] items-center justify-center text-gray-400">
-              No low stock products.
+              No stock alerts.
             </div>
           ) : (
             <div className="space-y-4">
               {lowStockProducts.slice(0, 6).map((product) => (
                 <div
                   key={product.product_id}
-                  className="grid grid-cols-[1fr_110px_130px] items-center rounded-xl bg-white px-5 py-4 shadow-sm"
+                  className="grid grid-cols-[1fr_110px_140px] items-center rounded-xl bg-white px-5 py-4 shadow-sm"
                 >
                   <div>
                     <p className="font-bold">{product.product_name}</p>
-
-                    
                   </div>
 
                   <p className="text-center text-sm font-semibold">
@@ -222,8 +211,16 @@ export default function DashboardPage() {
                   </p>
 
                   <div className="flex justify-end">
-                    <span className="rounded-full bg-[#F78D41] px-4 py-1 text-xs font-bold text-white">
-                      Low Stock
+                    <span
+                      className={`rounded-full px-4 py-1 text-xs font-bold text-white ${
+                        Number(product.stock_quantity || 0) === 0
+                          ? "bg-red-500"
+                          : "bg-[#F78D41]"
+                      }`}
+                    >
+                      {Number(product.stock_quantity || 0) === 0
+                        ? "Out of Stock"
+                        : "Low Stock"}
                     </span>
                   </div>
                 </div>
@@ -232,7 +229,6 @@ export default function DashboardPage() {
           )}
         </div>
 
-        {/* RECENT STOCK MOVEMENTS */}
         <div className="rounded-2xl bg-[#f4f4f4] p-8 shadow-md">
           <div className="mb-6 flex items-center justify-between">
             <h2 className="text-2xl font-bold">Recent Stock Movements</h2>
@@ -273,28 +269,6 @@ export default function DashboardPage() {
           )}
         </div>
       </div>
-
-      {/* OUT OF STOCK SECTION */}
-      {outOfStockProducts.length > 0 && (
-        <div className="mt-8 rounded-2xl bg-[#f4f4f4] p-8 shadow-md">
-          <h2 className="mb-6 text-2xl font-bold">Out of Stock</h2>
-
-          <div className="grid grid-cols-3 gap-4">
-            {outOfStockProducts.slice(0, 6).map((product) => (
-              <div
-                key={product.product_id}
-                className="rounded-xl bg-white px-5 py-4 shadow-sm"
-              >
-                <p className="font-bold">{product.product_name}</p>
-
-                <p className="mt-1 text-sm text-red-500">
-                  Currently unavailable
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </AppLayout>
   );
 }

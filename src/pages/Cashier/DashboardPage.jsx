@@ -428,13 +428,6 @@ export default function DashboardPage() {
               <p className="text-xl font-black">{itemsSoldToday}</p>
             </div>
 
-            <div className="flex items-center justify-between rounded-xl bg-gray-50 p-4">
-              <p className="text-sm text-gray-500">Low Stock Products</p>
-
-              <p className="text-xl font-black text-red-500">
-                {lowStockProducts.length}
-              </p>
-            </div>
           </div>
         </div>
       </div>

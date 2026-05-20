@@ -257,9 +257,11 @@ export default function InventoryPage() {
       const status =
         product.status === "inactive"
           ? "inactive"
-          : product.stock_quantity <= Number(product.reorder_level || 10)
-            ? "low stock"
-            : "in stock";
+          : product.stock_quantity === 0
+            ? "out of stock"
+            : product.stock_quantity <= Number(product.reorder_level || 10)
+              ? "low stock"
+              : "in stock";
 
       return name.includes(term) || status.includes(term);
     });
@@ -317,18 +319,22 @@ export default function InventoryPage() {
                     className={`inline-block min-w-[130px] rounded-full px-5 py-2 text-center text-xs font-bold text-white shadow-md ${
                       product.status === "inactive"
                         ? "bg-gray-400"
-                        : product.stock_quantity <=
-                            Number(product.reorder_level || 10)
-                          ? "bg-[#F78D41]"
-                          : "bg-[#4AAA5A]"
+                        : product.stock_quantity === 0
+                          ? "bg-red-500"
+                          : product.stock_quantity <=
+                              Number(product.reorder_level || 10)
+                            ? "bg-[#F78D41]"
+                            : "bg-[#4AAA5A]"
                     }`}
                   >
                     {product.status === "inactive"
                       ? "Inactive"
-                      : product.stock_quantity <=
-                          Number(product.reorder_level || 10)
-                        ? "Low Stock"
-                        : "In Stock"}
+                      : product.stock_quantity === 0
+                        ? "Out of Stock"
+                        : product.stock_quantity <=
+                            Number(product.reorder_level || 10)
+                          ? "Low Stock"
+                          : "In Stock"}
                   </span>
                 </div>
 
