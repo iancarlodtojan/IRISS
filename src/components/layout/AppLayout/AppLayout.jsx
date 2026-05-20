@@ -41,6 +41,14 @@ export default function AppLayout({ children, links = [], onSearch = null }) {
       },
     ],
 
+    logistics: [
+      {
+        label: "Add Product",
+        onClick: () => {
+          setProductActionOpen(true);
+        },
+      },
+    ],
   };
 
   const floatingActions = roleFloatingActions[role] || [];
