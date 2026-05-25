@@ -14,5 +14,5 @@ export const adminLinks = [ //modify later when admin pages are created
 export const logisticsLinks = [
   { label: "HOME", path: "/logistics/dashboard" },
   { label: "PRICE LIST", path: "/logistics/prices" },
-  { label: "ITEMS", path: "/logistics/inventory" },
+  { label: "INVENTORY", path: "/logistics/inventory" },
 ];
