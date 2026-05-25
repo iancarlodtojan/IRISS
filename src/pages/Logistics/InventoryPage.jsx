@@ -8,6 +8,7 @@ import AdjustStockModal from "../../components/modals/AdjustStockModal";
 
 export default function InventoryPage() {
   const [products, setProducts] = useState([]);
+  const [orderItems, setOrderItems] = useState([]);
   const [stockMovements, setStockMovements] = useState([]);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [selectedHistoryGroup, setSelectedHistoryGroup] = useState(null);
@@ -33,6 +34,19 @@ export default function InventoryPage() {
       }
 
       if (!ignore) setProducts(data || []);
+    }
+
+    async function loadOrderItems() {
+      const { data, error } = await supabase
+        .from("order_items")
+        .select("product_id, quantity");
+
+      if (error) {
+        console.error(error);
+        return;
+      }
+
+      if (!ignore) setOrderItems(data || []);
     }
 
     async function loadStockHistoryRealtime() {
@@ -67,6 +81,7 @@ export default function InventoryPage() {
     }
 
     loadProducts();
+    loadOrderItems();
     loadStockHistoryRealtime();
 
     const channel = supabase
@@ -85,6 +100,15 @@ export default function InventoryPage() {
         {
           event: "*",
           schema: "public",
+          table: "order_items",
+        },
+        loadOrderItems,
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
           table: "stock_movements",
         },
         loadStockHistoryRealtime,
@@ -96,6 +120,20 @@ export default function InventoryPage() {
       supabase.removeChannel(channel);
     };
   }, []);
+
+  const quantitySoldMap = useMemo(() => {
+    const map = {};
+
+    orderItems.forEach((item) => {
+      const productId = item.product_id;
+
+      if (!map[productId]) map[productId] = 0;
+
+      map[productId] += Number(item.quantity || 0);
+    });
+
+    return map;
+  }, [orderItems]);
 
   const groupedStockHistory = useMemo(() => {
     const groups = {};
@@ -284,9 +322,9 @@ export default function InventoryPage() {
       <div className="rounded-2xl bg-[#f4f4f4] p-6 shadow-md">
         <div className="grid grid-cols-[1.4fr_120px_140px_140px_160px_170px] border-b border-gray-300 pb-5 text-sm font-semibold">
           <p>Product Name</p>
-          <p className="text-center">Quantity</p>
-          <p className="text-center">Price</p>
-          <p className="text-center">Cost</p>
+          <p className="text-center">Selling Price</p>
+          <p className="text-center">Quantity on Hand</p>
+          <p className="text-center">Quantity Sold</p>
           <p className="text-center">Status</p>
           <p className="text-center">Action</p>
         </div>
@@ -300,18 +338,18 @@ export default function InventoryPage() {
             filteredProducts.map((product) => (
               <div
                 key={product.product_id}
-                className="grid grid-cols-[1.4fr_120px_140px_140px_160px_170px] items-center py-5 text-sm"
+                className="grid grid-cols-[1.4fr_140px_120px_140px_160px_170px] items-center py-5 text-sm"
               >
                 <p>{product.product_name}</p>
 
-                <p className="text-center">{product.stock_quantity}</p>
-
-                <p className="text-center">
+                <p className="text-center font-semibold">
                   ₱{Number(product.selling_price).toFixed(2)}
                 </p>
 
-                <p className="text-center">
-                  ₱{Number(product.cost_price).toFixed(2)}
+                <p className="text-center">{product.stock_quantity}</p>
+
+                <p className="text-center font-semibold text-red-500">
+                  {quantitySoldMap[product.product_id] || 0}
                 </p>
 
                 <div className="flex justify-center">
@@ -352,7 +390,7 @@ export default function InventoryPage() {
                     onClick={() => handleAdjustProduct(product)}
                     className="rounded-lg bg-[#7C6FF0] px-4 py-2 text-xs font-semibold text-white shadow-md transition hover:scale-105"
                   >
-                    Adjust
+                    Update
                   </button>
                 </div>
               </div>
@@ -405,19 +443,42 @@ export default function InventoryPage() {
                   </div>
 
                   <div className="space-y-3">
-                    {selectedHistoryGroup.items.map((item, index) => (
+                    {Object.values(
+                      [...selectedHistoryGroup.items]
+                        .sort(
+                          (a, b) =>
+                            new Date(a.created_at) - new Date(b.created_at),
+                        )
+                        .reduce((groups, item) => {
+                          const productName =
+                            item.products?.product_name || "Unknown Product";
+
+                          const key = `${productName}-${item.reason || ""}-${item.movement_type}`;
+
+                          if (!groups[key]) {
+                            groups[key] = {
+                              ...item,
+                              productName,
+                              quantity: 0,
+                              previous_stock: item.previous_stock,
+                              new_stock: item.new_stock,
+                            };
+                          }
+
+                          groups[key].quantity += Number(item.quantity || 0);
+                          groups[key].new_stock = item.new_stock;
+
+                          return groups;
+                        }, {}),
+                    ).map((item, index) => (
                       <div
-                        key={item.movement_id}
+                        key={`${item.productName}-${index}`}
                         className="grid grid-cols-[50px_1fr_120px] items-center border border-black px-5 py-4 text-sm"
                       >
-                        {/* NUMBER */}
                         <p>{index + 1}</p>
 
-                        {/* PRODUCT + REASON */}
                         <div>
-                          <p className="font-medium">
-                            {item.products?.product_name || "Unknown Product"}
-                          </p>
+                          <p className="font-medium">{item.productName}</p>
 
                           {item.reason && (
                             <p className="mt-1 text-xs italic text-gray-400">
@@ -426,7 +487,6 @@ export default function InventoryPage() {
                           )}
                         </div>
 
-                        {/* QUANTITY + STOCK CHANGE */}
                         <div className="text-right">
                           <p className="font-semibold text-black">
                             {getQuantitySign(item.movement_type)}

@@ -6,6 +6,7 @@ import LoginPage from "./pages/LoginPage";
 import CashierDashboardPage from "./pages/Cashier/DashboardPage";
 import ItemsPage from "./pages/Cashier/ItemsPage";
 import LogsPage from "./pages/Cashier/LogsPage";
+import PriceListPage from "./pages/Cashier/PriceListPage";
 import CustomersPage from "./pages/Cashier/CustomersPage";
 
 // ADMIN
@@ -15,6 +16,7 @@ import UsersPage from "./pages/Admin/UsersPage";
 // LOGISTICS
 import LogisticsDashboardPage from "./pages/Logistics/DashboardPage";
 import LogisticsInventoryPage from "./pages/Logistics/InventoryPage";
+import LogisticsPriceListPage from "./pages/Logistics/PriceListPage";
 
 function App() {
   return (
@@ -29,13 +31,13 @@ function App() {
         {/* CASHIER */}
         <Route path="/cashier/dashboard" element={<CashierDashboardPage />} />
         <Route path="/cashier/items" element={<ItemsPage />} />
+        <Route path="/cashier/prices" element={<PriceListPage />} />
         <Route path="/cashier/logs" element={<LogsPage />} />
         <Route path="/cashier/customers" element={<CustomersPage />} />
 
         {/* ADMIN */}
         <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
-        <Route path="/admin/users" element={<UsersPage/>} />
-
+        <Route path="/admin/users" element={<UsersPage />} />
 
         {/* LOGISTICS */}
         <Route
@@ -47,6 +49,8 @@ function App() {
           path="/logistics/inventory"
           element={<LogisticsInventoryPage />}
         />
+        <Route path="/logistics/prices" element={<LogisticsPriceListPage />} />
+        
         <Route
           path="/logistics/deliveries"
           element={<LogisticsDashboardPage />}

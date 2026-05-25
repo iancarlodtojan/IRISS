@@ -100,7 +100,7 @@ export default function AdjustStockModal({
         <div className="mb-5 flex items-start justify-between">
           <div>
             <h2 className="text-3xl font-black">
-              Adjust Stock
+              Update Stock
             </h2>
 
             <p className="mt-1 text-sm text-gray-500">

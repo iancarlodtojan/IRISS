@@ -13,6 +13,29 @@ export default function PaymentDetailsModal({
   const [discount, setDiscount] = useState("");
   const [paidAmount, setPaidAmount] = useState("");
 
+  const groupedItems = useMemo(() => {
+    return Object.values(
+      items.reduce((groups, item) => {
+        if (!groups[item.product_id]) {
+          groups[item.product_id] = {
+            product_id: item.product_id,
+            product_name: item.product_name,
+            quantity: 0,
+            selling_price: item.selling_price,
+            subtotal: 0,
+            items: [],
+          };
+        }
+
+        groups[item.product_id].quantity += Number(item.quantity || 0);
+        groups[item.product_id].subtotal += Number(item.subtotal || 0);
+        groups[item.product_id].items.push(item);
+
+        return groups;
+      }, {}),
+    );
+  }, [items]);
+
   const displayPaidAmount =
     paidAmount === "" ? total.toFixed(2) : paidAmount;
 
@@ -70,24 +93,35 @@ export default function PaymentDetailsModal({
     <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/30 backdrop-blur-sm">
       <div className="w-[860px] rounded-xl bg-white p-6 shadow-2xl">
         <div className="grid grid-cols-[320px_1fr] gap-8">
-          {/* LEFT SUMMARY */}
           <div className="flex min-h-[520px] flex-col border border-black bg-white">
-            <div className="flex-1 p-4">
-              {items.map((item) => (
+            <div className="flex-1 overflow-y-auto p-4">
+              {groupedItems.map((group) => (
                 <div
-                  key={item.product_id}
+                  key={group.product_id}
                   className="border-b border-dashed border-gray-500 py-2"
                 >
-                  <div className="flex justify-between text-sm font-bold">
-                    <p>{item.product_name}</p>
+                  <div className="flex justify-between gap-3 text-sm font-bold">
+                    <p>
+                      {group.product_name} ({group.quantity})
+                    </p>
 
-                    <p>{item.subtotal.toFixed(2)}</p>
+                    <p>{group.subtotal.toFixed(2)}</p>
                   </div>
 
                   <p className="text-sm">
-                    {item.quantity} x{" "}
-                    {item.selling_price.toFixed(2)}
+                    {group.quantity} x {group.selling_price.toFixed(2)}
                   </p>
+
+                  <div className="mt-1 space-y-1">
+                    {group.items.map((item) => (
+                      <p
+                        key={item.id}
+                        className="text-xs text-gray-500"
+                      >
+                        SN: {item.serial_number}
+                      </p>
+                    ))}
+                  </div>
                 </div>
               ))}
             </div>
@@ -96,14 +130,12 @@ export default function PaymentDetailsModal({
               {discountValue > 0 && (
                 <div className="mb-2 flex justify-between text-sm">
                   <p>DISCOUNT</p>
-
                   <p>-{discountValue.toFixed(2)}</p>
                 </div>
               )}
 
               <div className="flex justify-between text-2xl font-black">
                 <p>TOTAL</p>
-
                 <p>{amountDue.toFixed(2)}</p>
               </div>
             </div>

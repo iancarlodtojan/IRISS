@@ -24,7 +24,20 @@ export default function LogsPage() {
 
   const [searchTerm, setSearchTerm] = useState("");
 
-  const months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+  const months = [
+    "JAN",
+    "FEB",
+    "MAR",
+    "APR",
+    "MAY",
+    "JUN",
+    "JUL",
+    "AUG",
+    "SEP",
+    "OCT",
+    "NOV",
+    "DEC",
+  ];
 
   useEffect(() => {
     let ignore = false;
@@ -32,7 +45,8 @@ export default function LogsPage() {
     async function loadOrders() {
       const { data, error } = await supabase
         .from("orders")
-        .select(`
+        .select(
+          `
           order_id,
           invoice_number,
           total_amount,
@@ -43,7 +57,8 @@ export default function LogsPage() {
           order_items (
             quantity
           )
-        `)
+        `,
+        )
         .order("created_at", { ascending: false });
 
       if (error) {
@@ -58,8 +73,16 @@ export default function LogsPage() {
 
     const channel = supabase
       .channel("orders-realtime")
-      .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, loadOrders)
-      .on("postgres_changes", { event: "*", schema: "public", table: "order_items" }, loadOrders)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "orders" },
+        loadOrders,
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "order_items" },
+        loadOrders,
+      )
       .subscribe();
 
     return () => {
@@ -91,7 +114,14 @@ export default function LogsPage() {
 
       return invoice.includes(term) || customer.includes(term);
     });
-  }, [orders, appliedYear, appliedMonth, appliedDay, appliedSortType, searchTerm]);
+  }, [
+    orders,
+    appliedYear,
+    appliedMonth,
+    appliedDay,
+    appliedSortType,
+    searchTerm,
+  ]);
 
   const daysInMonth = useMemo(() => {
     return new Date(Number(draftYear), draftMonth, 0).getDate();
@@ -117,7 +147,8 @@ export default function LogsPage() {
   async function handleOpenInvoiceDetails(orderId) {
     const { data, error } = await supabase
       .from("orders")
-      .select(`
+      .select(
+        `
         order_id,
         invoice_number,
         total_amount,
@@ -127,21 +158,24 @@ export default function LogsPage() {
           contact_number,
           email
         ),
-        order_items (
-          order_item_id,
-          quantity,
-          unit_price,
-          subtotal,
-          products (
-            product_name
-          )
-        ),
+order_items (
+  order_item_id,
+  product_id,
+  serial_number,
+  quantity,
+  unit_price,
+  subtotal,
+  products (
+    product_name
+  )
+),
         payments (
           payment_method,
           amount_paid,
           payment_status
         )
-      `)
+      `,
+      )
       .eq("order_id", orderId)
       .single();
 
@@ -215,7 +249,9 @@ export default function LogsPage() {
                   onClick={() => handleOpenInvoiceDetails(order.order_id)}
                   className="grid w-full grid-cols-[240px_1fr_1fr_140px_160px] items-center py-5 text-left text-sm transition hover:bg-white/70"
                 >
-                  <p className="whitespace-nowrap">{formatDate(order.created_at)}</p>
+                  <p className="whitespace-nowrap">
+                    {formatDate(order.created_at)}
+                  </p>
 
                   <p className="text-center">{order.invoice_number}</p>
 
@@ -259,11 +295,15 @@ export default function LogsPage() {
                     type="button"
                     onClick={() => setDraftSortType("daily")}
                     className={`rounded-xl border p-4 text-left transition ${
-                      draftSortType === "daily" ? "border-black" : "border-gray-300"
+                      draftSortType === "daily"
+                        ? "border-black"
+                        : "border-gray-300"
                     }`}
                   >
                     <p className="font-semibold">Daily</p>
-                    <p className="text-xs text-gray-500">Display invoices by day</p>
+                    <p className="text-xs text-gray-500">
+                      Display invoices by day
+                    </p>
                   </button>
 
                   <button
@@ -273,11 +313,15 @@ export default function LogsPage() {
                       setDraftDay("");
                     }}
                     className={`rounded-xl border p-4 text-left transition ${
-                      draftSortType === "monthly" ? "border-black" : "border-gray-300"
+                      draftSortType === "monthly"
+                        ? "border-black"
+                        : "border-gray-300"
                     }`}
                   >
                     <p className="font-semibold">Monthly</p>
-                    <p className="text-xs text-gray-500">Display invoices by month</p>
+                    <p className="text-xs text-gray-500">
+                      Display invoices by month
+                    </p>
                   </button>
                 </div>
               </div>
@@ -306,7 +350,9 @@ export default function LogsPage() {
                         setDraftDay("");
                       }}
                       className={`h-10 rounded-xl border text-sm transition ${
-                        draftMonth === index + 1 ? "border-black" : "border-gray-300"
+                        draftMonth === index + 1
+                          ? "border-black"
+                          : "border-gray-300"
                       }`}
                     >
                       {month}
@@ -367,4 +413,3 @@ export default function LogsPage() {
     </AppLayout>
   );
 }
-
