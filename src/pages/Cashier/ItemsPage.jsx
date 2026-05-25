@@ -100,22 +100,22 @@ export default function ItemsPage() {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "products" },
-        loadProducts,
+        () => loadProducts(),
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "categories" },
-        loadCategories,
+        () => loadCategories(),
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "order_items" },
-        loadOrderItems,
+        () => loadOrderItems(),
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "stock_movements" },
-        loadStockHistoryRealtime,
+        () => loadStockHistoryRealtime(),
       )
       .subscribe();
 
