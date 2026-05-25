@@ -48,8 +48,7 @@ export default function AddNewProductModal({ open, onClose }) {
     if (!name) return null;
 
     const existing = categories.find(
-      (category) =>
-        category.category_name.toLowerCase() === name.toLowerCase(),
+      (category) => category.category_name.toLowerCase() === name.toLowerCase(),
     );
 
     if (existing) return existing.category_id;
@@ -108,8 +107,7 @@ export default function AddNewProductModal({ open, onClose }) {
           categoryMode === "existing"
             ? selectedCategory?.category_name || "Uncategorized"
             : newCategoryName.trim(),
-        new_category_name:
-          categoryMode === "new" ? newCategoryName.trim() : "",
+        new_category_name: categoryMode === "new" ? newCategoryName.trim() : "",
         cost_price: Number(costPrice || 0),
         selling_price: Number(sellingPrice || 0),
         stock_quantity: Number(quantity || 0),
@@ -228,19 +226,24 @@ export default function AddNewProductModal({ open, onClose }) {
           {items.map((item, index) => (
             <div
               key={`${item.product_name}-${index}`}
-              className="grid grid-cols-[40px_1.2fr_1fr_110px_110px_90px_40px] items-center border border-gray-500 px-4 py-3 text-sm"
+              className="grid grid-cols-[40px_minmax(0,2fr)_140px_110px_110px_80px_40px] items-center gap-3 border border-gray-400 px-4 py-3 text-sm"
             >
-              <p>{index + 1}</p>
-              <p>{item.product_name}</p>
-              <p>{item.category_name}</p>
+              <p className="text-center font-medium">{index + 1}</p>
+
+              <p className="truncate font-medium">{item.product_name}</p>
+
+              <p className="truncate text-center">{item.category_name}</p>
+
               <p className="text-center">{item.cost_price.toFixed(2)}</p>
+
               <p className="text-center">{item.selling_price.toFixed(2)}</p>
+
               <p className="text-center">{item.stock_quantity}</p>
 
               <button
                 type="button"
                 onClick={() => handleRemoveItem(index)}
-                className="text-right"
+                className="text-center text-lg"
               >
                 ×
               </button>
