@@ -329,6 +329,11 @@ export default function InvoiceModal({ open, onClose }) {
         contact: contactNumber.trim() || "N/A",
         email: email.trim() || "",
       },
+      payment: {
+        method: paymentData.paymentMethod,
+        paid: Number(paymentData.paidAmount || 0),
+        status: "Paid",
+      },
       items: invoiceItems,
       total: totalAmount,
     };
@@ -361,6 +366,9 @@ export default function InvoiceModal({ open, onClose }) {
 
   function generateReceiptHTML(invoice) {
     const groupedItems = groupInvoiceItems(invoice.items);
+
+    const paid = Number(invoice.payment?.paid || invoice.total);
+    const change = Math.max(paid - invoice.total, 0);
 
     const itemRows = groupedItems
       .map(
@@ -506,39 +514,49 @@ export default function InvoiceModal({ open, onClose }) {
 
           <div class="line"></div>
 
-          <div class="meta">
-            Invoice No: ${invoice.invoiceNumber}<br />
-            Date: ${new Date(invoice.order.created_at).toLocaleString("en-PH")}<br />
-            Customer: ${invoice.customer.name}<br />
-            Payment: Cash<br />
-            Status: Paid
-          </div>
+<div class="meta">
+  Invoice No: ${invoice.invoiceNumber}<br />
+  Date: ${new Date(invoice.order.created_at).toLocaleString("en-PH")}<br />
+  Customer: ${invoice.customer.name}<br />
+  Payment: ${invoice.payment?.method || "Cash"}<br />
+  Status: ${invoice.payment?.status || "Paid"}
+</div>
 
-          <div class="line"></div>
+<div class="line"></div>
 
-          <table>
-            <thead>
-              <tr>
-                <th>Item</th>
-                <th class="center">Qty</th>
-                <th class="right">Price</th>
-                <th class="right">Total</th>
-              </tr>
-            </thead>
+<table>
+  <thead>
+    <tr>
+      <th>Item</th>
+      <th class="center">Qty</th>
+      <th class="right">Price</th>
+      <th class="right">Total</th>
+    </tr>
+  </thead>
 
-            <tbody>
-              ${itemRows}
-            </tbody>
-          </table>
+  <tbody>
+    ${itemRows}
+  </tbody>
+</table>
 
-          <div class="line"></div>
+<div class="line"></div>
 
-          <div class="summary-row grand-total">
-            <span>TOTAL</span>
-            <span>₱${invoice.total.toFixed(2)}</span>
-          </div>
+<div class="summary-row grand-total">
+  <span>TOTAL</span>
+  <span>₱${invoice.total.toFixed(2)}</span>
+</div>
 
-          <div class="line"></div>
+<div class="summary-row">
+  <span>Paid</span>
+  <span>₱${paid.toFixed(2)}</span>
+</div>
+
+<div class="summary-row">
+  <span>Change</span>
+  <span>₱${change.toFixed(2)}</span>
+</div>
+
+<div class="line"></div>
 
           <div class="footer center">
             Thank you for shopping!<br />
@@ -556,6 +574,9 @@ export default function InvoiceModal({ open, onClose }) {
 
   function generateInvoiceHTML(invoice) {
     const groupedItems = groupInvoiceItems(invoice.items);
+
+    const paid = Number(invoice.payment?.paid || invoice.total);
+    const change = Math.max(paid - invoice.total, 0);
 
     const itemRows = groupedItems
       .map(
@@ -792,9 +813,7 @@ export default function InvoiceModal({ open, onClose }) {
               ${new Date(invoice.order.created_at).toLocaleString("en-PH")}
             </p>
 
-            <p>
-              <strong>Payment:</strong> Cash
-            </p>
+            <strong>Payment:</strong> ${invoice.payment?.method || "Cash"}
 
             <p>
               <strong>Status:</strong> Paid
@@ -818,11 +837,21 @@ export default function InvoiceModal({ open, onClose }) {
         </table>
 
         <div class="summary">
-          <div class="summary-row total">
-            <span>Total</span>
-            <span>₱${invoice.total.toFixed(2)}</span>
-          </div>
-        </div>
+  <div class="summary-row total">
+    <span>Total</span>
+    <span>₱${invoice.total.toFixed(2)}</span>
+  </div>
+
+  <div class="summary-row">
+    <span>Paid</span>
+    <span>₱${paid.toFixed(2)}</span>
+  </div>
+
+  <div class="summary-row">
+    <span>Change</span>
+    <span>₱${change.toFixed(2)}</span>
+  </div>
+</div>
 
         <div class="footer">
           <div>
