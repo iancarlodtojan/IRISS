@@ -1,21 +1,85 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
 
 export default function AddNewProductModal({ open, onClose }) {
   const [items, setItems] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [detailOpen, setDetailOpen] = useState(false);
 
   const [productName, setProductName] = useState("");
+  const [categoryMode, setCategoryMode] = useState("existing");
+  const [selectedCategoryId, setSelectedCategoryId] = useState("");
+  const [newCategoryName, setNewCategoryName] = useState("");
+
   const [costPrice, setCostPrice] = useState("");
   const [sellingPrice, setSellingPrice] = useState("");
   const [quantity, setQuantity] = useState("");
 
   const [saving, setSaving] = useState(false);
 
+  useEffect(() => {
+    if (!open) return;
+
+    async function loadCategories() {
+      const { data, error } = await supabase
+        .from("categories")
+        .select("category_id, category_name")
+        .order("category_name", { ascending: true });
+
+      if (error) {
+        console.error(error);
+        return;
+      }
+
+      setCategories(data || []);
+    }
+
+    loadCategories();
+  }, [open]);
+
+  async function getOrCreateCategoryId(item) {
+    if (item.categoryMode === "existing") {
+      return item.category_id || null;
+    }
+
+    const name = item.new_category_name.trim();
+
+    if (!name) return null;
+
+    const existing = categories.find(
+      (category) =>
+        category.category_name.toLowerCase() === name.toLowerCase(),
+    );
+
+    if (existing) return existing.category_id;
+
+    const { data, error } = await supabase
+      .from("categories")
+      .insert({ category_name: name })
+      .select("category_id, category_name")
+      .single();
+
+    if (error) throw error;
+
+    setCategories((prev) => [...prev, data]);
+
+    return data.category_id;
+  }
+
   function handleAddItem() {
     if (!productName.trim()) {
       alert("Product name is required");
+      return;
+    }
+
+    if (categoryMode === "existing" && !selectedCategoryId) {
+      alert("Please select a category");
+      return;
+    }
+
+    if (categoryMode === "new" && !newCategoryName.trim()) {
+      alert("Please enter a new category name");
       return;
     }
 
@@ -29,10 +93,23 @@ export default function AddNewProductModal({ open, onClose }) {
       return;
     }
 
+    const selectedCategory = categories.find(
+      (category) => String(category.category_id) === String(selectedCategoryId),
+    );
+
     setItems((prev) => [
       ...prev,
       {
         product_name: productName.trim(),
+        categoryMode,
+        category_id:
+          categoryMode === "existing" ? Number(selectedCategoryId) : null,
+        category_name:
+          categoryMode === "existing"
+            ? selectedCategory?.category_name || "Uncategorized"
+            : newCategoryName.trim(),
+        new_category_name:
+          categoryMode === "new" ? newCategoryName.trim() : "",
         cost_price: Number(costPrice || 0),
         selling_price: Number(sellingPrice || 0),
         stock_quantity: Number(quantity || 0),
@@ -67,9 +144,12 @@ export default function AddNewProductModal({ open, onClose }) {
       }
 
       for (const item of items) {
+        const categoryId = await getOrCreateCategoryId(item);
+
         const { data: product, error: productError } = await supabase
           .from("products")
           .insert({
+            category_id: categoryId,
             product_name: item.product_name,
             cost_price: item.cost_price,
             selling_price: item.selling_price,
@@ -110,6 +190,9 @@ export default function AddNewProductModal({ open, onClose }) {
 
   function resetDetailForm() {
     setProductName("");
+    setCategoryMode("existing");
+    setSelectedCategoryId("");
+    setNewCategoryName("");
     setCostPrice("");
     setSellingPrice("");
     setQuantity("");
@@ -130,7 +213,7 @@ export default function AddNewProductModal({ open, onClose }) {
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/30 backdrop-blur-sm">
-      <div className="relative h-[620px] w-[760px] rounded-2xl bg-white p-6 shadow-2xl">
+      <div className="relative h-[620px] w-[860px] rounded-2xl bg-white p-6 shadow-2xl">
         <button
           type="button"
           onClick={handleClose}
@@ -145,10 +228,11 @@ export default function AddNewProductModal({ open, onClose }) {
           {items.map((item, index) => (
             <div
               key={`${item.product_name}-${index}`}
-              className="grid grid-cols-[40px_1fr_120px_120px_100px_40px] items-center border border-gray-500 px-4 py-3 text-sm"
+              className="grid grid-cols-[40px_1.2fr_1fr_110px_110px_90px_40px] items-center border border-gray-500 px-4 py-3 text-sm"
             >
               <p>{index + 1}</p>
               <p>{item.product_name}</p>
+              <p>{item.category_name}</p>
               <p className="text-center">{item.cost_price.toFixed(2)}</p>
               <p className="text-center">{item.selling_price.toFixed(2)}</p>
               <p className="text-center">{item.stock_quantity}</p>
@@ -197,7 +281,7 @@ export default function AddNewProductModal({ open, onClose }) {
 
         {detailOpen && (
           <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/30 backdrop-blur-sm">
-            <div className="relative w-[380px] rounded-xl bg-white p-5 shadow-2xl">
+            <div className="relative w-[420px] rounded-xl bg-white p-5 shadow-2xl">
               <button
                 type="button"
                 onClick={() => {
@@ -220,6 +304,63 @@ export default function AddNewProductModal({ open, onClose }) {
                 onChange={(e) => setProductName(e.target.value)}
                 className="mb-3 h-9 w-full rounded-lg border border-gray-400 px-3 outline-none"
               />
+
+              <label className="mb-1 block text-sm font-semibold">
+                Category
+              </label>
+
+              <div className="mb-3 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setCategoryMode("existing")}
+                  className={`flex-1 rounded-lg border px-3 py-2 text-xs font-semibold ${
+                    categoryMode === "existing"
+                      ? "bg-[#3693a8] text-white"
+                      : "bg-white text-black"
+                  }`}
+                >
+                  Existing
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setCategoryMode("new")}
+                  className={`flex-1 rounded-lg border px-3 py-2 text-xs font-semibold ${
+                    categoryMode === "new"
+                      ? "bg-[#3693a8] text-white"
+                      : "bg-white text-black"
+                  }`}
+                >
+                  New Category
+                </button>
+              </div>
+
+              {categoryMode === "existing" ? (
+                <select
+                  value={selectedCategoryId}
+                  onChange={(e) => setSelectedCategoryId(e.target.value)}
+                  className="mb-3 h-9 w-full rounded-lg border border-gray-400 px-3 outline-none"
+                >
+                  <option value="">Select category</option>
+
+                  {categories.map((category) => (
+                    <option
+                      key={category.category_id}
+                      value={category.category_id}
+                    >
+                      {category.category_name}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  type="text"
+                  placeholder="Enter new category"
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  className="mb-3 h-9 w-full rounded-lg border border-gray-400 px-3 outline-none"
+                />
+              )}
 
               <label className="mb-1 block text-sm font-semibold">Cost</label>
               <input
