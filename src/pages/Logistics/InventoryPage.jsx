@@ -321,10 +321,10 @@ export default function InventoryPage() {
 
       <div className="rounded-2xl bg-[#f4f4f4] p-6 shadow-md">
         <div className="grid grid-cols-[1.4fr_120px_140px_140px_160px_170px] border-b border-gray-300 pb-5 text-sm font-semibold">
-          <p>Product Name</p>
-          <p className="text-center">Selling Price</p>
-          <p className="text-center">Quantity on Hand</p>
-          <p className="text-center">Quantity Sold</p>
+          <p>Product</p>
+          <p className="text-center">Price</p>
+          <p className="text-center">Stock</p>
+          <p className="text-center">Sold</p>
           <p className="text-center">Status</p>
           <p className="text-center">Action</p>
         </div>
