@@ -376,7 +376,7 @@ export default function ItemsPage() {
         <div className="rounded-2xl bg-[#f4f4f4] p-6 shadow-md">
           <div className="grid grid-cols-[1.8fr_160px_180px_180px_180px] border-b border-gray-300 pb-5 text-sm font-semibold">
             <p>Product Name</p>
-            <p className="text-center">Price</p>
+            <p className="text-center">Selling Price</p>
             <p className="text-center">Quantity Sold</p>
             <p className="text-center">Quantity on Hand</p>
             <p className="text-center">Status</p>
