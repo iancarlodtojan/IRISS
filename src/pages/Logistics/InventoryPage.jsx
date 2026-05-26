@@ -93,7 +93,10 @@ export default function InventoryPage() {
           schema: "public",
           table: "products",
         },
-        loadProducts,
+        async () => {
+          await new Promise((resolve) => setTimeout(resolve, 300));
+          await loadProducts();
+        },
       )
       .on(
         "postgres_changes",
@@ -102,7 +105,10 @@ export default function InventoryPage() {
           schema: "public",
           table: "order_items",
         },
-        loadOrderItems,
+        async () => {
+          await new Promise((resolve) => setTimeout(resolve, 300));
+          await loadOrderItems();
+        },
       )
       .on(
         "postgres_changes",
@@ -111,7 +117,10 @@ export default function InventoryPage() {
           schema: "public",
           table: "stock_movements",
         },
-        loadStockHistoryRealtime,
+        async () => {
+          await new Promise((resolve) => setTimeout(resolve, 300));
+          await loadStockHistoryRealtime();
+        },
       )
       .subscribe();
 
@@ -326,7 +335,7 @@ export default function InventoryPage() {
           <p className="text-center">Stock</p>
           <p className="text-center">Sold</p>
           <p className="text-center">Status</p>
-          <p className="text-center">Action</p>
+          <p className="text-center">Actions</p>
         </div>
 
         <div className="divide-y divide-gray-200">

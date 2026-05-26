@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
 import LoginPage from "./pages/LoginPage";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 // CASHIER
 import CashierDashboardPage from "./pages/Cashier/DashboardPage";
@@ -29,35 +30,105 @@ function App() {
         <Route path="/login" element={<LoginPage />} />
 
         {/* CASHIER */}
-        <Route path="/cashier/dashboard" element={<CashierDashboardPage />} />
-        <Route path="/cashier/items" element={<ItemsPage />} />
-        <Route path="/cashier/prices" element={<PriceListPage />} />
-        <Route path="/cashier/logs" element={<LogsPage />} />
-        <Route path="/cashier/customers" element={<CustomersPage />} />
+        <Route
+          path="/cashier/dashboard"
+          element={
+            <ProtectedRoute allowedRoles={["cashier"]}>
+              <CashierDashboardPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/cashier/items"
+          element={
+            <ProtectedRoute allowedRoles={["cashier"]}>
+              <ItemsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/cashier/prices"
+          element={
+            <ProtectedRoute allowedRoles={["cashier"]}>
+              <PriceListPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/cashier/logs"
+          element={
+            <ProtectedRoute allowedRoles={["cashier"]}>
+              <LogsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/cashier/customers"
+          element={
+            <ProtectedRoute allowedRoles={["cashier"]}>
+              <CustomersPage />
+            </ProtectedRoute>
+          }
+        />
 
         {/* ADMIN */}
-        <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
-        <Route path="/admin/users" element={<UsersPage />} />
+        <Route
+          path="/admin/dashboard"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <AdminDashboardPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/users"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <UsersPage />
+            </ProtectedRoute>
+          }
+        />
 
         {/* LOGISTICS */}
         <Route
           path="/logistics/dashboard"
-          element={<LogisticsDashboardPage />}
+          element={
+            <ProtectedRoute allowedRoles={["logistics"]}>
+              <LogisticsDashboardPage />
+            </ProtectedRoute>
+          }
         />
-
         <Route
           path="/logistics/inventory"
-          element={<LogisticsInventoryPage />}
+          element={
+            <ProtectedRoute allowedRoles={["logistics"]}>
+              <LogisticsInventoryPage />
+            </ProtectedRoute>
+          }
         />
-        <Route path="/logistics/prices" element={<LogisticsPriceListPage />} />
-        
+        <Route
+          path="/logistics/prices"
+          element={
+            <ProtectedRoute allowedRoles={["logistics"]}>
+              <LogisticsPriceListPage />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/logistics/deliveries"
-          element={<LogisticsDashboardPage />}
+          element={
+            <ProtectedRoute allowedRoles={["logistics"]}>
+              <LogisticsDashboardPage />
+            </ProtectedRoute>
+          }
         />
         <Route
           path="/logistics/suppliers"
-          element={<LogisticsDashboardPage />}
+          element={
+            <ProtectedRoute allowedRoles={["logistics"]}>
+              <LogisticsDashboardPage />
+            </ProtectedRoute>
+          }
         />
 
         {/* FALLBACK */}

@@ -66,8 +66,24 @@ export default function InvoiceModal({ open, onClose }) {
 
     loadData();
 
+    const channel = supabase
+      .channel("invoice-products-realtime")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "products",
+        },
+        () => {
+          loadData();
+        },
+      )
+      .subscribe();
+
     return () => {
       ignore = true;
+      supabase.removeChannel(channel);
     };
   }, [open]);
 
@@ -904,7 +920,9 @@ export default function InvoiceModal({ open, onClose }) {
 
       const invoice = await saveInvoiceToDatabase(paymentData);
 
-      alert(`Invoice saved successfully: ${invoice.invoiceNumber}`);
+      alert(
+        `Sale completed successfully.\nInventory updated.\nInvoice: ${invoice.invoiceNumber}`,
+      );
 
       resetForm();
       setPaymentDetailsOpen(false);
@@ -922,6 +940,10 @@ export default function InvoiceModal({ open, onClose }) {
       setSaving(true);
 
       const invoice = await saveInvoiceToDatabase(paymentData);
+
+      alert(
+        `Sale completed successfully.\nInventory updated.\nInvoice: ${invoice.invoiceNumber}`,
+      );
 
       setSavedInvoice(invoice);
       setPaymentDetailsOpen(false);

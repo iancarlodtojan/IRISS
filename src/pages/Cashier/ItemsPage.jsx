@@ -96,28 +96,42 @@ export default function ItemsPage() {
     loadStockHistoryRealtime();
 
     const channel = supabase
-      .channel("cashier-items-realtime")
+      .channel(`cashier-items-${crypto.randomUUID()}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "products" },
-        () => loadProducts(),
+        (payload) => {
+          console.log("ITEMS PRODUCT UPDATE:", payload);
+          loadProducts();
+        },
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "categories" },
-        () => loadCategories(),
+        (payload) => {
+          console.log("ITEMS CATEGORY UPDATE:", payload);
+          loadCategories();
+        },
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "order_items" },
-        () => loadOrderItems(),
+        (payload) => {
+          console.log("ITEMS ORDER ITEMS UPDATE:", payload);
+          loadOrderItems();
+        },
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "stock_movements" },
-        () => loadStockHistoryRealtime(),
+        (payload) => {
+          console.log("ITEMS STOCK MOVEMENT UPDATE:", payload);
+          loadStockHistoryRealtime();
+        },
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log("Items realtime status:", status);
+      });
 
     return () => {
       ignore = true;
